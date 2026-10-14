@@ -52,7 +52,14 @@ jobs:
           "appVersion=$version" >> $env:GITHUB_ENV
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
-      - name: Build native package
+      - name: Prepare Mac desktop dependencies
+        if: runner.os == 'macOS'
+        run: |
+          if ('${{ matrix.platform }}' -eq 'macos-x64') { bun install --frozen-lockfile --cwd compat/macIntel }
+          bun packages/startup/scripts/buildMac.ts
+      - name: Build desktop package
+        run: bun run package:desktopRelease
+      - name: Build optional Web package
         run: bun run package:${{ matrix.package }}
       - name: Build first-use Skills bundle
         if: runner.os == 'Windows'
@@ -62,12 +69,14 @@ jobs:
           packagePlatform: ${{ matrix.platform }}
         run: |
           $extension = if ($env:RUNNER_OS -eq 'Windows') { 'zip' } else { 'dmg' }
-          $packages = @(Get-ChildItem -LiteralPath dist -File | Where-Object { $_.Name -match "^filmFraylo-\d.*-$($env:packagePlatform)\.$extension$" })
-          if ($packages.Count -ne 1) { throw 'Expected exactly one platform package' }
-          $stable = "dist/filmFraylo-$($env:packagePlatform).$extension"
-          Copy-Item -LiteralPath $packages[0].FullName -Destination $stable
-          $hash = (Get-FileHash -LiteralPath $stable -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $(Split-Path -Leaf $stable)" | Set-Content -LiteralPath "$stable.sha256" -Encoding utf8NoBOM
+          foreach ($mode in @('desktop', 'web')) {
+            $packages = @(Get-ChildItem -LiteralPath dist -File | Where-Object { $_.Name -match "^filmFraylo-$mode-\d.*-$($env:packagePlatform)\.$extension$" })
+            if ($packages.Count -ne 1) { throw "Expected exactly one $mode platform package" }
+            $stable = "dist/filmFraylo-$mode-$($env:packagePlatform).$extension"
+            Copy-Item -LiteralPath $packages[0].FullName -Destination $stable
+            $hash = (Get-FileHash -LiteralPath $stable -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $(Split-Path -Leaf $stable)" | Set-Content -LiteralPath "$stable.sha256" -Encoding utf8NoBOM
+          }
       - name: Attest build provenance
         if: github.event.repository.private == false
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4

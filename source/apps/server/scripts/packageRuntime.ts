@@ -36,7 +36,7 @@ export async function packageRuntime(output: string, platform: string, readme: s
   }
   await writeFile(resolve(output, "thirdPartyNotices.txt"), notices);
   await writeFile(resolve(output, "buildInfo.json"), JSON.stringify({
-    product: "FilmFraylo", version, platform, bun: Bun.version,
+    product: "FilmFraylo", mode: "web", version, platform, bun: Bun.version,
     commit: process.env.GITHUB_SHA ?? null, repository: process.env.GITHUB_REPOSITORY ?? null,
     runId: process.env.GITHUB_RUN_ID ?? null, builtAt: new Date().toISOString(),
   }, null, 2));

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=640, height=800" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>*{box-sizing:border-box;margin:0}html,body{width:640px;height:800px;overflow:hidden;background:#0b1020}#stage,.filmArt{width:100%;height:100%}svg{display:block;width:100%;height:100%}</style>
+</head>
+<body>
+<div id="stage" data-composition-id="welcomeFilm" data-start="0" data-duration="4" data-fps="30" data-width="640" data-height="800">
+<div id="filmArt" class="clip filmArt" data-start="0" data-duration="4" data-track-index="0">
+<svg viewBox="0 0 640 800" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<radialGradient id="backLight"><stop stop-color="#203d63"/><stop offset="1" stop-color="#0b1020"/></radialGradient>
+<linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#74e3f7"/><stop offset=".45" stop-color="#4284ed"/><stop offset="1" stop-color="#ae72f8"/></linearGradient>
+<linearGradient id="blade" x1="0" y1="0" x2=".7" y2="1"><stop stop-color="#48bfd8"/><stop offset=".5" stop-color="#385acc"/><stop offset="1" stop-color="#242d60"/></linearGradient>
+<linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#399fbd"/><stop offset=".7" stop-color="#5665c3"/><stop offset="1" stop-color="#ac7bcb"/></linearGradient>
+<radialGradient id="glass"><stop stop-color="#1a3555"/><stop offset=".7" stop-color="#11263d"/><stop offset="1" stop-color="#081624"/></radialGradient>
+<linearGradient id="stripEdge"><stop stop-color="#253854"/><stop offset=".5" stop-color="#586598"/><stop offset="1" stop-color="#253854"/></linearGradient>
+<pattern id="filmPattern" width="186" height="184" patternUnits="userSpaceOnUse" patternTransform="translate(0 308)">
+<rect width="186" height="184" fill="#141b32"/>
+<path d="M0 1H186M0 183H186" stroke="url(#stripEdge)" stroke-width="2"/>
+<g fill="#66759d" opacity=".55"><rect x="14" y="10" width="18" height="9" rx="2"/><rect x="49" y="10" width="18" height="9" rx="2"/><rect x="84" y="10" width="18" height="9" rx="2"/><rect x="119" y="10" width="18" height="9" rx="2"/><rect x="154" y="10" width="18" height="9" rx="2"/><rect x="14" y="165" width="18" height="9" rx="2"/><rect x="49" y="165" width="18" height="9" rx="2"/><rect x="84" y="165" width="18" height="9" rx="2"/><rect x="119" y="165" width="18" height="9" rx="2"/><rect x="154" y="165" width="18" height="9" rx="2"/></g>
+<rect x="9" y="29" width="168" height="126" rx="8" fill="url(#sky)"/>
+<circle cx="134" cy="62" r="17" fill="#d6e8f3" opacity=".8"/>
+<path d="M9 129L64 71L102 116L132 87L177 130V147Q177 155 169 155H17Q9 155 9 147Z" fill="#202d5b"/>
+<path d="M9 144L55 121L92 135L143 113L177 139V147Q177 155 169 155H17Q9 155 9 147Z" fill="#17203d"/>
+<path d="M51 85L64 71L76 85L66 82L61 86Z" fill="#8cbcd8" opacity=".65"/>
+</pattern>
+<path id="irisBlade" d="M320 288A142 142 0 0 1 443 359L372 430L346 385Z"/>
+</defs>
+<rect width="640" height="800" fill="#0b1020"/>
+<ellipse cx="304" cy="450" rx="410" ry="390" fill="url(#backLight)"/>
+<g transform="rotate(-24 320 400)" opacity=".86"><g id="filmStrip"><rect x="-240" y="308" width="1488" height="184" rx="8" fill="url(#filmPattern)"/></g></g>
+<ellipse cx="336" cy="647" rx="148" ry="20" fill="#070c18" opacity=".5"/>
+<g id="lens">
+<circle cx="320" cy="435" r="180" fill="#080f1e" opacity=".6"/>
+<circle cx="320" cy="425" r="177" fill="#101a2d" stroke="url(#edge)" stroke-width="2"/>
+<circle cx="320" cy="425" r="169" fill="none" stroke="#2c405c" stroke-width="1"/>
+<circle cx="320" cy="425" r="160" fill="none" stroke="#516680" stroke-width="6" stroke-dasharray="1 8" opacity=".7"/>
+<circle cx="320" cy="425" r="151" fill="#0b1428" stroke="#1c2b42" stroke-width="3"/>
+<g transform="translate(0 -5)"><g id="iris" fill="url(#blade)" stroke="#7fa9df" stroke-opacity=".38" stroke-width=".8"><use href="#irisBlade"/><use href="#irisBlade" transform="rotate(60 320 430)"/><use href="#irisBlade" transform="rotate(120 320 430)"/><use href="#irisBlade" transform="rotate(180 320 430)"/><use href="#irisBlade" transform="rotate(240 320 430)"/><use href="#irisBlade" transform="rotate(300 320 430)"/></g>
+<circle cx="320" cy="430" r="61" fill="url(#glass)" stroke="#6b98d0" stroke-width="1"/>
+<circle cx="320" cy="430" r="49" fill="none" stroke="#315a78" stroke-width="1"/>
+<ellipse id="reflection" cx="301" cy="408" rx="24" ry="9" transform="rotate(-35 301 408)" fill="#7ad8ee" opacity=".23"/>
+<circle cx="340" cy="454" r="6" fill="#987fe7" opacity=".34"/></g>
+<path d="M172 351A166 166 0 0 1 304 259" fill="none" stroke="#9cecff" stroke-width="2" stroke-linecap="round" opacity=".75"/>
+<path d="M353 589A166 166 0 0 0 470 497" fill="none" stroke="#ac85ee" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+<circle cx="320" cy="261" r="3" fill="#b1edff"/>
+</g>
+</svg>
+</div>
+</div>
+<script>
+const tl = gsap.timeline({ paused: true });
+tl.fromTo("#filmStrip", { x: 0 }, { x: -186, duration: 4, ease: "none" }, 0);
+tl.fromTo("#iris", { rotation: 0, svgOrigin: "320 430" }, { rotation: 60, svgOrigin: "320 430", duration: 4, ease: "none" }, 0);
+tl.fromTo("#reflection", { opacity: .23 }, { opacity: .5, duration: 2, ease: "sine.inOut", repeat: 1, yoyo: true }, 0);
+window.__timelines["welcomeFilm"] = tl;
+tl.seek(0);
+</script>
+</body>
+</html>
+
+

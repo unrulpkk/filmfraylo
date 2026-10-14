@@ -12,6 +12,9 @@ const result = await Bun.build({
   minify: true,
 });
 if (!result.success) throw new AggregateError(result.logs, "MCP 构建失败");
+const registerBuild = await Bun.build({ entrypoints: [resolve(packageRoot, "../../apps/server/scripts/registerHarness.ts")],
+  outdir: output, target: "bun", minify: true });
+if (!registerBuild.success) throw new AggregateError(registerBuild.logs, "Harness registration build failed");
 await mkdir(output, { recursive: true });
 // Skill 改名后不把旧入口留在发行包中；这里只清理本次构建目录。
 await rm(resolve(output, "skills"), { recursive: true, force: true });

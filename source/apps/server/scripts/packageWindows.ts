@@ -10,7 +10,7 @@ if (Bun.version !== "1.4.3") throw new Error("运行包固定使用 Bun 1.4.3，
 const root = resolve(import.meta.dirname, "../../..");
 const version = config.app.version;
 if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.]+)?$/.test(version)) throw new Error("版本号须为 x.y.z 或 x.y.z-preview.1");
-const name = `filmFraylo-${version}-windows-x64`;
+const name = `filmFraylo-web-${version}-windows-x64`;
 const output = resolve(root, "dist", name);
 // ACT: 每次使用新目录，避免混入旧包、凭证和本地工作区；已有输出不覆盖。
 await mkdir(resolve(root, "dist"), { recursive: true });
@@ -19,11 +19,10 @@ await $`${process.execPath} run build:server`.cwd(root);
 await packageRuntime(output, "windows-x64", "docs/windowsPackage.md");
 await writeFile(resolve(output, "stop.cmd"), '@echo off\r\ncd /d "%~dp0"\r\nruntime\\bun.exe filmFraylo.js stop %*\r\npause\r\n');
 await writeFile(resolve(output, "installSkills.cmd"), '@echo off\r\ncd /d "%~dp0"\r\nruntime\\bun.exe filmFraylo.js install %*\r\npause\r\n');
-const compiler = resolve(process.env.WINDIR ?? "C:/Windows", "Microsoft.NET/Framework64/v4.0.30319/csc.exe");
-await $`${compiler} /nologo /target:winexe /platform:x64 /optimize+ /reference:System.Windows.Forms.dll ${`/win32icon:${resolve(root, "packages/assets/logo.ico")}`} ${`/out:${resolve(output, "FilmFraylo.exe")}`} ${resolve(import.meta.dirname, "filmFrayloLauncher.cs")}`;
+await writeFile(resolve(output, "start.cmd"), '@echo off\r\ncd /d "%~dp0"\r\nruntime\\bun.exe filmFraylo.js start --open %*\r\n');
 
 const archive = resolve(root, "dist", `${name}.zip`);
 await $`tar -a -cf ${archive} -C ${resolve(root, "dist")} ${name}`;
 const hash = createHash("sha256").update(await readFile(archive)).digest("hex");
 await writeFile(`${archive}.sha256`, `${hash}  ${name}.zip\n`);
-console.log(`已生成 ${archive}；包含 EXE 启动器与 Bun，无需用户安装依赖。`);
+console.log(`已生成 ${archive}；本地 Web 包，使用 start.cmd 或 Skill 启动。`);

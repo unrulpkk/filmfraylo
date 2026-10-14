@@ -43,7 +43,8 @@
     "build:tools": "bun -e \"import { rmSync } from '@toonflow/file'; import { resolve } from 'node:path'; rmSync(resolve('build/tools'), { recursive: true, force: true });\" && NODE_ENV=production bun run --filter './packages/tools/*' build",
     "package:windows": "bun apps/server/scripts/packageWindows.ts",
     "package:mac": "bun apps/server/scripts/packageMac.ts",
-    "package:skills": "bun apps/server/scripts/packageSkills.ts"
+    "package:skills": "bun apps/server/scripts/packageSkills.ts",
+    "package:desktopRelease": "bun apps/desktop/scripts/packageRelease.ts"
   },
   "devDependencies": {
     "@toonflow/file": "workspace:*",

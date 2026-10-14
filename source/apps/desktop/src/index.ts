@@ -1,7 +1,9 @@
 import { setLocaleFallback, t, translateMessage } from "@toonflow/server/i18n";
 import { detectLocale, normalizeLocale } from "@toonflow/i18n";
 import { execFile } from "node:child_process";
-import { existsSync, writeAtomicSync } from "@toonflow/file";
+import { existsSync, mkdirSync, writeFileSync, writeAtomicSync } from "@toonflow/file";
+import { randomBytes } from "node:crypto";
+import { homedir } from "node:os";
 import { file } from "@toonflow/file/bun";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
@@ -76,7 +78,16 @@ async function start() {
   try {
     // Windows 的 data 与 app 同级；macOS 的 data 与 .app 同级，避免随程序更新被替换。
     const installDirectory = resolve(PATHS.RESOURCES_FOLDER, process.platform === "darwin" ? "../../.." : "../..");
-    const dataDirectory = process.env.TOONFLOW_DATA_DIR ?? resolve(installDirectory, "data");
+    const legacyData = resolve(installDirectory, "data");
+    const dataDirectory = process.env.TOONFLOW_DATA_DIR ?? (existsSync(resolve(legacyData, "settings.json"))
+      ? legacyData : resolve(homedir(), ".filmfraylo/desktopData"));
+    mkdirSync(dataDirectory, { recursive: true });
+    try {
+      writeFileSync(resolve(dataDirectory, "settings.json"), JSON.stringify({ settings: {
+        externalHarness: true, ui: { startupAnimation: false },
+        mcp: { enabled: true, token: randomBytes(32).toString("hex"), port: 10588 },
+      } }), { flag: "wx", mode: 0o600 });
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
     // ACT: 先显示原生动画，再加载服务，避免初始化期间没有反馈。
     const startupSettings = await file(resolve(dataDirectory, "settings.json")).json().catch((error) => {
       if (error.code !== "ENOENT") console.error("读取启动设置失败，使用默认启动动画：", error);
@@ -280,6 +291,9 @@ async function start() {
       splash = undefined;
     });
     function saveRuntime(port: number) {
+      // Public discovery only; credentials remain in the native MCP runtime file.
+      writeAtomicSync(resolve(dataDirectory, "desktopRuntime.json"), JSON.stringify({ pid: process.pid, port,
+        resources: PATHS.RESOURCES_FOLDER }));
       if (process.platform === "win32") {
         // ACT: 切换连接也更新端口；启动器通过 PID 忽略已退出进程留下的记录。
         writeAtomicSync(resolve(PATHS.RESOURCES_FOLDER, "desktopRuntime.json"), JSON.stringify({ pid: process.pid, port }));

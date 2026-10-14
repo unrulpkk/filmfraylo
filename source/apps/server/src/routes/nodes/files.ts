@@ -24,5 +24,6 @@ export default router.get("/", validateFields({ name: z.string().regex(/^[a-z][a
   });
   if (disabled) return res.status(404).json(error("节点已禁用", null, 404));
   res.set("Cache-Control", "no-cache");
-  await sendFile(res, filePath);
+  // 安装目录可能包含 .filmfraylo；从已校验的节点目录发送文件，避免隐藏父目录触发 404。
+  await sendFile(res, `${name}.umd.js`, { root: nodesDirectory });
 });

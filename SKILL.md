@@ -1,38 +1,42 @@
 ---
 name: filmfraylo
-description: 由 Codex、Claude Code、Cursor、OpenCode 或 Gemini CLI 等外部 Harness 在本地 FilmFraylo 执行小说转漫剧制作，连接 MCP 画布，完成全书分析、角色档案、剧本、分镜与媒体生产。仅用于 FilmFraylo 项目，不用于一般写作或源码开发。
+description: 由 Codex、Claude Code、Cursor、OpenCode、Gemini CLI 或 WorkBuddy 等外部 Harness 在本地 FilmFraylo 执行小说转漫剧制作，连接 MCP 画布，完成全书分析、角色档案、剧本、分镜与媒体生产。仅用于 FilmFraylo 项目，不用于一般写作或源码开发。
 ---
 
 # FilmFraylo 外部 Harness
 
 当前外部 Harness 负责阅读、推理、创作与工具执行。连接前读取同批安装的官方 [Toonflow MCP Skill](../toonflow/SKILL.md)；首次缺少依赖时先按下节安装。保持官方工具、工作区文件和节点契约；不调用 `runAgent`，不替换运行时，不直接写画布 JSON。
 
-首次安装、切换宿主或 MCP 工具不可用时，先读取 [Harness 接入](references/harnesses.md)，确认当前宿主的 Skill 目录、配置格式和重连方式。同一 Skill 支持 Codex、Claude Code、Cursor、OpenCode、Gemini CLI；其他客户端可用标准 stdio MCP 配置，但需确认其本机执行能力。
+首次安装、切换宿主或 MCP 工具不可用时，先读取 [Harness 接入](references/harnesses.md)，确认当前宿主的 Skill 目录、配置格式和重连方式。同一 Skill 支持 Codex、Claude Code、Cursor、OpenCode、Gemini CLI、WorkBuddy；其他客户端可用标准 stdio MCP 配置，但需确认其本机执行能力。
+
+WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，按自动注册流程完成接入。
 
 ## 首次使用与系统识别
 
+首次下载安装前，按 [运行方式与来源说明](references/harnesses.md#首次选择运行方式) 向用户提供两个选项：**桌面版（推荐，Windows EXE / macOS App）**、**本地网页版**，说明源码地址、构建提交号、SHA256 校验和未签名提示。已有明确选择时直接沿用，不反复询问；用户要求“推荐方案”时优先桌面版。先核实对应 Release 是否有真正的桌面成品，不能把打开浏览器的 EXE 启动器称为桌面版，也不能在桌面版缺失时悄悄改用网页版。
+
 普通用户只安装 Skill，由本 Skill 下载已经编译好的应用成品。无需克隆 `source/`、安装开发依赖或执行源码构建；仓库源码用于查看与审查。没有正式 Release、对应平台附件缺失或下载失败时，报告具体原因，不自动改走源码安装。仅在用户明确要求源码开发或自编译时使用开发流程。
 
-已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据。没有本机运行入口时，按宿主系统选择安装脚本；不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
+已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据；该入口必须与用户选择的运行方式一致。以下脚本默认使用真正桌面版；用户选择网页版时显式传入 `-mode web` / `--mode web`，不隐式降级。按宿主系统选择，不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
 
 - Windows：运行 `powershell -NoProfile -File <本Skill目录>/scripts/setupWindows.ps1 -harness <宿主>`，脚本确认 x64，下载 Windows ZIP。
 - macOS：运行 `sh <本Skill目录>/scripts/setupMac.sh --harness <宿主>`，脚本自动识别 Intel / Apple Silicon（包括 Rosetta），下载对应 DMG。
 - 其他系统、Windows ARM：说明当前发行包不支持，不套用 Windows 或 Mac 包。
 
-宿主参数为 `codex`、`claude`、`cursor`、`opencode`、`gemini` 或 `generic`；省略时兼容旧行为，默认为 Codex。仅 Codex 可追加 `-register` / `--register` 自动注册；其他宿主按接入说明合并输出配置，无需安装 Codex。脚本的 `-inspect` / `--inspect` 只显示系统、架构、下载文件、宿主和安装位置，不下载或启动。路径作为独立命令参数传入，含空格时正确引用。Codex CLI 不在 PATH 时可使用 `-codex` / `--codex` 指定实际 CLI 路径。
+宿主参数为 `codex`、`claude`、`cursor`、`opencode`、`gemini`、`workbuddy` 或 `generic`；省略时默认为 Codex。六种宿主默认自动配置 MCP，只有 Codex 使用 Codex CLI；其他宿主合并用户级配置、保留无关内容和注释、拒绝覆盖同名冲突。generic 仅生成配置。`-register` / `--register` 保留兼容旧调用。脚本的 `-inspect` / `--inspect` 只显示系统、架构、下载文件、宿主和安装位置，不下载或启动。路径作为独立命令参数传入，含空格时正确引用。Codex CLI 不在 PATH 时可使用 `-codex` / `--codex` 指定实际 CLI 路径。
 
-本仓库根目录就是 FilmFraylo Skill。应用制品只从 [GitHub Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 获取；不要使用 GitHub 自动生成的 Source code ZIP/TAR，也不要从 Actions 临时 artifact 下载。脚本读取 `references/releaseRepository.txt`，使用 `https://github.com/<repository>/releases/latest/download/<asset>`：Windows 对应 `filmFraylo-windows-x64.zip`，Mac 对应 `filmFraylo-macos-arm64.dmg` 或 `filmFraylo-macos-x64.dmg`，先校验同名 `.sha256` 再安装。
+本仓库根目录就是 FilmFraylo Skill。应用制品只从 [GitHub Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 获取；不要使用 Source code ZIP/TAR 或 Actions 临时 artifact。脚本读取 `references/releaseRepository.txt`，先解析正式 Release 并固定到该版本：桌面包为 `filmFraylo-desktop-windows-x64.zip`、`filmFraylo-desktop-macos-arm64.dmg` 或 `filmFraylo-desktop-macos-x64.dmg`；网页版把文件名中的 `desktop` 换为 `web`。先校验同名 `.sha256` 再安装；旧 Release 缺少新附件时明确报告，不拿旧 Web EXE 替代桌面版。
 
 单独安装 Skill 也可使用同一 Release 的 `filmFrayloSkills.zip`，包含官方 MCP Skill 依赖。仓库地址为空时，使用用户提供或已验证的 GitHub 地址，以 `-repository owner/repo` / `--repository owner/repo` 传入；不能猜测下载源。不会覆盖已有应用或已修改的 Skill；安装冲突时保留现有内容，核对 Skill 与运行包版本。
 
-安装后打开本地 Web，重新连接 MCP 再创作。macOS 如被系统安全提示阻止，交由用户处理，不自动关闭 Gatekeeper 或清除隔离属性。无模型 Key 可以进入画布，实际生成前再配置 safillu。
+网页版安装后打开本地 Web，重新连接 MCP 再创作；桌面版在应用窗口中操作画布。遇到系统安全提示时说明实际情况，不自动关闭系统防护或清除隔离属性；SHA256 不能替代代码签名或保证软件无风险。无模型 Key 可以进入画布，实际生成前再配置 safillu。
 
 ## API Key 与充值引导
 
 官网及充值入口统一使用 https://api.safillu.com。需要获取 Key 或充值时提供可点击链接；未核实具体页面路径时只使用该首页，不猜测登录、令牌或支付页面地址。
 
-- 无 Key 也可进入画布，由当前 Harness 分析小说、编写剧本和分镜、创建或配置节点；不把充值作为这些步骤的前置条件。
-- 首次准备调用图片、视频或配音模型时，若未配置 Key，引导用户在官网获取 API Key，再到本地 FilmFraylo「设置 → 媒体模型 → safillu → 编辑模型」填写 API Key 并保存。首次欢迎页也可填写或选择稍后配置。默认服务地址为 `https://api.safillu.com`。
+- 首次启动直接进入项目首页，不要求填写 Key、完成欢迎页或充值。当前 Harness 先通过 MCP 创建或打开本地项目、创建画布和文件、分析小说、编写剧本和分镜、配置节点；这些步骤使用 Harness 自身的推理能力，不依赖 FilmFraylo 的文本或媒体模型 Key。
+- 首次准备调用图片、视频或配音模型时，若未配置 Key，引导用户在官网获取 API Key，再到本地 FilmFraylo「设置 → 媒体模型 → safillu → 编辑模型」填写 API Key 并保存。默认服务地址为 `https://api.safillu.com`。未配置时保留已有文件和画布，继续可独立完成的文字工作，不阻塞整个创作流程。
 - Key 由用户直接填入本地网页，不要求粘贴到聊天里，不回显 Key，也不把它写入剧本、画布文本、日志或 productionState.md。检查状态时优先使用不返回密钥的模型或配置状态接口。
 - 只有供应商明确返回余额或额度不足时才引导到官网充值；认证失败先检查 Key 和权限，网络错误、限流或模型不可用按真实错误处理，不一律要求充值。不编造余额、套餐、价格或预计费用。
 - 充值金额与支付由用户在官网自行完成。用户确认已配置或已充值后，先核对现有任务状态，再继续已授权且尚未完成的生成；保留节点及结果，不重复提交。没有可用的免费验证接口时，不用付费生成偷偷测试 Key。
@@ -45,7 +49,7 @@ description: 由 Codex、Claude Code、Cursor、OpenCode 或 Gemini CLI 等外�
 
 1. 先调用官方 MCP `getAppState`。工具缺失或服务离线时，若已存在安装器生成的 [本机启动入口](references/localRuntime.md)，执行其中命令数组；没有则执行上面的成品安装流程。仅当用户明确选择源码开发环境时，在应用根目录执行 `bun run install:filmFraylo`。
 2. 启动脚本检查目标目录和端口，只启动缺失服务。输出包含网页地址、runtime 路径和Skill 安装状态；不读取或输出 runtime 中的 token。Skill 不会让本轮尚未注册的 MCP 工具自动出现，首次配置后需要重新连接 MCP。
-3. 用浏览器打开脚本返回的 Web 地址并打开本地项目，再 `getAppState` 取得实际 connectionId、directory、canvasId。连接属于其他项目时使用官方 `openProject`，完成后刷新目标；不借用其他实例。
+3. 网页版用浏览器打开脚本返回的 Web 地址；桌面版使用应用窗口，不额外打开浏览器。启动后直接进入项目首页，无需先填写 Key。调用 `getAppState` 定位连接；新项目先通过宿主文件能力创建用户指定的本地目录，再使用官方 `openProject` 打开该目录。使用 `addCanvas` 和工作区文件工具准备画布与文件，再刷新实际 connectionId、directory、canvasId；不借用其他实例，不直接写画布 JSON。
 4. 宿主支持时，通过 resources/list/read 发现当前 Toonflow 的 workflow 及需要的资料，尊重用户已修改版本；缺少 resources 能力时按 Harness 接入说明处理。内置工作流的提问映射到当前宿主对话，创作和调用均由当前 Harness 完成。
 
 ## 选择当前阶段

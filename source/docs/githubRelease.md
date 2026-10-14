@@ -46,8 +46,8 @@ git push origin v2.0.0
 ## 核验下载包
 
 ```powershell
-Get-FileHash .\filmFraylo-2.0.0-windows-x64.zip -Algorithm SHA256
-gh attestation verify .\filmFraylo-2.0.0-windows-x64.zip --repo YOUR_ACCOUNT/YOUR_REPOSITORY
+Get-FileHash .\filmFraylo-desktop-windows-x64.zip -Algorithm SHA256
+gh attestation verify .\filmFraylo-desktop-windows-x64.zip --repo unrulpkk/filmfraylo
 ```
 
 校验值应与 `.sha256` 相同。来源证明应指向本仓库和对应提交；包内 `buildInfo.json` 可用于定位构建日志。来源可追溯不等于逐字节可复现构建：时间戳、编译器与 ZIP 元数据可能导致自行构建的校验值不同。
@@ -59,12 +59,13 @@ gh attestation verify .\filmFraylo-2.0.0-windows-x64.zip --repo YOUR_ACCOUNT/YOU
 ```powershell
 cd source
 bun install --frozen-lockfile
+bun run package:desktopRelease
 bun run package:windows
 ```
 
-打包脚本调用原生全量 Web/Server 构建，附带运行时，并使用 Windows 的 .NET Framework C# 编译器生成小型 EXE 启动器。输出目录已存在时会拒绝覆盖；请换版本或自行备份旧目录。设置 `$env:appVersion = "2.0.1"` 可指定版本。
+`package:desktopRelease` 复用原生 Electrobun 桌面构建，Windows ZIP 内的 `app/bin/launcher.exe` 打开独立窗口，macOS 生成真正 App 的 DMG。`package:windows` / `package:mac` 另行构建可选 Web 包；Windows Web 包使用 start.cmd，不再生成浏览器 EXE 启动器。输出目录已存在时拒绝覆盖，请换版本或保留旧目录。Mac 需先执行 `bun packages/startup/scripts/buildMac.ts`；Intel 还需在 `compat/macIntel` 安装锁定依赖。GitHub Actions 已包含这些步骤。
 
-运行包只复制指定构建目录，不复制 `.env`、用户数据或工作区。新安装的数据默认保存到 `%LOCALAPPDATA%\FilmFraylo\data`；检测到旧 `%LOCALAPPDATA%\safillu\data\settings.json` 时沿用旧目录，升级时保留。
+运行包只复制指定构建目录，不复制 `.env`、用户数据或工作区。Skill 安装的桌面版默认将数据保存到 `~/.filmfraylo/desktopData`；检测到安装目录旁已有 `data/settings.json` 时沿用。Web 版遵从其启动入口保存的数据目录。用户工作区独立于安装目录，升级时保留。
 
 相关依据：[GitHub Actions 构建产物](https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts)、[Bun 官方 Action](https://bun.sh/guides/runtime/cicd)、[GitHub 构建来源证明](https://github.com/actions/attest)。
 
@@ -80,9 +81,10 @@ Release 除带版本号的包，还提供内容相同的稳定文件名，供首
 
 | 系统 | 稳定下载文件 |
 | --- | --- |
-| Windows x64 | filmFraylo-windows-x64.zip |
-| Apple Silicon Mac | filmFraylo-macos-arm64.dmg |
-| Intel Mac | filmFraylo-macos-x64.dmg |
+| Windows x64 桌面 | filmFraylo-desktop-windows-x64.zip |
+| Apple Silicon Mac 桌面 | filmFraylo-desktop-macos-arm64.dmg |
+| Intel Mac 桌面 | filmFraylo-desktop-macos-x64.dmg |
+| 可选 Web 包 | 上述文件名的 desktop 换为 web |
 
 必须发布正式 Release 后自动下载才可用；草稿与预发布不会作为首次安装的 latest。失败时保留下载与错误信息，不猜测其他仓库或降级到错误架构。
 

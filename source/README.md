@@ -22,11 +22,11 @@ Docker Compose 同样在 `source/` 内运行 `docker compose up --build`；它�
 
 ## Windows 成品与 GitHub 发布
 
-运行包自带 Bun，解压后双击 `FilmFraylo.exe` 启动本地 Web。没有 Key 也能进入和使用画布，实际调用生成服务时再配置。
+桌面包内含原生运行环境，Windows 解压后运行 `app/bin/launcher.exe` 打开独立 FilmFraylo 窗口，macOS 打开 FilmFraylo.app。可选 Web 包直接由 Skill 或 start.cmd 启动，不再套浏览器 EXE 启动器。没有 Key 也能进入和使用画布，实际调用生成服务时再配置。
 
 - [运行包使用说明](docs/windowsPackage.md)
 - [提交源码、自动构建与发布步骤](docs/githubRelease.md)
-- 本地打包：`bun run package:windows`
+- 桌面打包：`bun run package:desktopRelease`；可选 Web 包：`bun run package:windows` / `bun run package:mac`
 
 GitHub Actions 支持手动构建；推送 `v*` 版本标签会自动构建并发布到 Releases。压缩包附带 SHA-256 校验文件，公开仓库另提供构建来源证明。
 

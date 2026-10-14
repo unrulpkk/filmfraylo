@@ -6,7 +6,7 @@ const startupTarget = process.platform === "darwin" ? (process.arch === "x64" ? 
 export default {
   app: {
     name: "FilmFraylo",
-    identifier: "local.toonflow.desktop",
+    identifier: "local.filmfraylo.desktop",
     version: appConfig.app.version,
     urlSchemes: ["toonflow"],
   },
@@ -15,6 +15,7 @@ export default {
     // ACT: Photon 按包所在目录读取 WASM，保留原包，避免内联后引用构建机路径。
     bun: { entrypoint: "apps/desktop/src/index.ts", minify: true, external: ["@silvia-odwyer/photon-node"] },
     copy: {
+      "build/desktop/harness/desktopHarness.js": "desktopHarness.js",
       "build/desktop/photon": "bun/node_modules/@silvia-odwyer/photon-node",
       ...(process.platform === "win32" ? {
         "build/desktop/protocol/protocolLauncher.exe": "protocolLauncher.exe",

@@ -1,5 +1,16 @@
 # FilmFraylo Windows 验证记录
 
+## 原生桌面与六种 Harness（2.0.2，2026-10-14）
+
+- Windows 原生 Electrobun 构建、桌面 ZIP 与独立 Web ZIP 打包成功。桌面安装在 `~/.filmfraylo/desktop`，实际启动独立 FilmFraylo 窗口，未调用浏览器打开命令。
+- 桌面原生 stdio MCP initialize、tools/list、getAppState 调用成功：46 个工具、没有 runAgent，取得实际桌面页面连接。重复启动复用同一实例。默认无模型 Key；没有提交收费生成请求。
+- 六种 Harness（Codex、Claude Code、Cursor、OpenCode、Gemini CLI、WorkBuddy）及 generic 的配置输出已解析核对，路径指向真实桌面桥接文件，保留 --external。Windows 六种宿主 × desktop/web 的平台包选择检查通过。
+- JSONC 合并检查覆盖注释、其他配置、尾随逗号、重复执行、同名冲突及重复键；原生桌面 typecheck 通过。没有改写用户其他宿主的真实配置来冒充客户端端到端测试。
+- 桌面、Web、通用 Skill、WorkBuddy Skill 四个 ZIP 的 CRC、SHA256 和关键文件检查通过。Web 包不含 FilmFraylo.exe 浏览器启动器；技能独立包与当前源码一致。
+- 项目内和 WorkBuddy 本机 Skill 已同步并通过元数据校验。Mac 脚本通过语法检查，工作流配置包含 Intel / Apple Silicon 原生构建；尚未在真实 Mac 或 GitHub Actions 运行本次修改。
+
+下方保留的是旧 Web 启动器阶段的历史记录，不代表本次桌面版及最新发布状态。
+
 验证日期：2026-10-14。
 
 - Web 与 Server 现有 typecheck 均通过；Bun 1.4.3 全量原生构建与 Windows 打包成功。

@@ -1,6 +1,6 @@
 # FilmFraylo Windows 运行包
 
-需要 Windows 10/11 x64。完整解压到普通目录，双击 **FilmFraylo.exe**：启动本地服务后自动打开浏览器。运行包自带 Bun，不需要安装 Node.js、Bun、Nginx 或下载源码。
+此包是可选本地网页版，原生桌面版见 desktopPackage.md。需要 Windows 10/11 x64。完整解压到普通目录，双击 **start.cmd**：启动本地服务后自动打开浏览器。运行包自带 Bun，不需要安装 Node.js、Bun、Nginx 或下载源码，不再套 EXE 启动器。
 
 首次无 safillu Key 时选择“稍后配置”。Codex 可通过 MCP 创建画布、编写文本、配置节点；实际调用模型生成媒体才需要 Key。设置里的“媒体模型”提供 safillu 的 API Key 配置。
 
@@ -21,7 +21,7 @@ Codex CLI 不在 PATH 时，追加 `--codex "完整的 codex.exe 路径"`。安�
 ## 自定义启动
 
 ```powershell
-.\FilmFraylo.exe start --port 3010 --data "D:\filmFrayloData" --open
+.\runtime\bun.exe .\filmFraylo.js start --port 3010 --data "D:\filmFrayloData" --open
 .\runtime\bun.exe .\filmFraylo.js install --port 3010 --data "D:\filmFrayloData" --register
 .\runtime\bun.exe .\filmFraylo.js stop --port 3010 --data "D:\filmFrayloData"
 ```
@@ -34,4 +34,4 @@ Codex CLI 不在 PATH 时，追加 `--codex "完整的 codex.exe 路径"`。安�
 
 项目保存于本地。使用生成服务时，会向供应商发送对应提示词和参考素材；原有匿名使用数据设置位于“设置 → 隐私”。生成结果下载到本地工作区。FFmpeg 可在插件管理中按需安装，不包含在本包中。
 
-当前 EXE 没有配置 Windows 代码签名证书。来源证明用于核验构建来源，不等同于 Windows 代码签名。
+来源证明用于核验构建来源，不等同于 Windows 代码签名或安全保证。

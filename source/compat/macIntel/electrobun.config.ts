@@ -7,6 +7,7 @@ export default {
     // ACT: 与主桌面构建一致，保留 Photon 原包及其相邻 WASM。
     bun: { entrypoint: "generated/src/index.ts", minify: true, external: ["@silvia-odwyer/photon-node"] },
     copy: {
+      "../../build/desktop/harness/desktopHarness.js": "desktopHarness.js",
       "../../build/desktop/photon": "bun/node_modules/@silvia-odwyer/photon-node",
       "../../build/mcp": "mcp",
       "../../build/web": "views/mainview",

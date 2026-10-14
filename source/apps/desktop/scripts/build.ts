@@ -17,6 +17,9 @@ if (mode === "typecheck") {
 if (!(isMac && ["x64", "arm64"].includes(process.arch)) && !(process.platform === "win32" && process.arch === "x64")) {
   throw new Error("桌面构建需要 Windows x64 或 macOS x64/arm64 环境。");
 }
+const harnessBuild = await Bun.build({ entrypoints: [resolve(import.meta.dir, "desktopHarness.ts")],
+  outdir: resolve(projectDir, "build/desktop/harness"), target: "bun", minify: true });
+if (!harnessBuild.success) throw new AggregateError(harnessBuild.logs, "Desktop harness build failed.");
 if (mode === "dev") process.env.TOONFLOW_DATA_DIR = resolve(projectDir, "data");
 if (isMac) {
   const startupTarget = isIntelMac ? "macX64" : "macArm64";
