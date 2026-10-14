@@ -9,6 +9,8 @@ Codex 负责阅读、推理、创作与工具执行。连接前读取同批安�
 
 ## 首次使用与系统识别
 
+普通用户只安装 Skill，由本 Skill 下载已经编译好的应用成品。无需克隆 `app/`、安装开发依赖或执行源码构建；仓库源码用于查看与审查。没有正式 Release、对应平台附件缺失或下载失败时，报告具体原因，不自动改走源码安装。仅在用户明确要求源码开发或自编译时使用开发流程。
+
 已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据。没有本机运行入口时，按宿主系统选择安装脚本；不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
 
 - Windows：运行 `powershell -NoProfile -File <本Skill目录>/scripts/setupWindows.ps1 -register`，脚本确认 x64，下载 Windows ZIP。
@@ -23,7 +25,7 @@ Codex 负责阅读、推理、创作与工具执行。连接前读取同批安�
 
 ## 启动与定位
 
-1. 先调用官方 MCP `getAppState`。工具缺失或服务离线时，若已存在安装器生成的 [本机启动入口](references/localRuntime.md)，执行其中命令数组；没有则执行上面的系统安装流程。源码开发环境也可在应用根目录执行 `bun run install:filmFraylo`，缺少构建时说明真实错误。
+1. 先调用官方 MCP `getAppState`。工具缺失或服务离线时，若已存在安装器生成的 [本机启动入口](references/localRuntime.md)，执行其中命令数组；没有则执行上面的成品安装流程。仅当用户明确选择源码开发环境时，在应用根目录执行 `bun run install:filmFraylo`。
 2. 启动脚本检查目标目录和端口，只启动缺失服务。输出包含网页地址、runtime 路径和Skill 安装状态；不读取或输出 runtime 中的 token。Skill 不会让本轮尚未注册的 MCP 工具自动出现，首次配置后需要重新连接 MCP。
 3. 用浏览器打开脚本返回的 Web 地址并打开本地项目，再 `getAppState` 取得实际 connectionId、directory、canvasId。连接属于其他项目时使用官方 `openProject`，完成后刷新目标；不借用其他实例。
 4. 通过 resources/list/read 发现当前 Toonflow 的 workflow 及需要的资料，尊重用户已修改版本。内置工作流的提问映射到 Codex 对话，创作和调用均由 Codex 完成。

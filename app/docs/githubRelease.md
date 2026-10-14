@@ -1,5 +1,11 @@
 # 提交源码与发布 Windows / macOS 包
 
+## 分发约定
+
+普通用户安装 Skill 后直接下载 Release 中已编译的对应平台成品；源码仓库用于公开审查和开发，不是用户首次使用必须下载的内容。应用包自带运行环境。成品放在 Release 附件中，不建立 Git 跟踪的二进制成品目录。
+
+Actions 的 artifact 用于构建验收，不能代替 `releases/latest/download`。正式发布完成后，Skill 的自动下载入口才生效；未发布或附件缺失时不回退到源码编译。
+
 ## 仓库根目录
 
 仓库根目录包含 `skill/` 与 `app/`：`skill/filmfraylo` 是开源业务 Skill，`app` 是本地画布与服务源码。`.github/workflows/releasePackages.yml` 位于仓库根目录；Actions 在 `app` 内运行构建命令，从 `app/dist/` 上传产物。请克隆完整仓库，应用构建需要同级的 `skill` 源码。

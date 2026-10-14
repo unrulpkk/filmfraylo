@@ -4,16 +4,31 @@
 
 开源的小说转漫剧技能与本地画布应用。Codex 执行创作技能，通过 MCP 操作无限画布、节点与媒体生成；项目和素材保存在用户本地。
 
-## 两部分源码
+## 用户使用：Skill 下载成品
+
+用户安装 `$filmfraylo` 后，Codex 检测本机是否已有应用；没有则按 Windows / Apple Silicon Mac / Intel Mac 下载已编译成品，校验后安装并打开本地画布。成品自带运行环境，用户无需克隆应用源码、安装开发依赖或执行编译。随后提供小说 `.txt`，即可由 Codex 开始分析、创建画布和配置节点。
+
+成品放在 GitHub [Releases](https://github.com/unrulpkk/filmfraylo/releases)，与源码分开分发：
+
+| 下载项 | 用途 |
+| --- | --- |
+| `filmFrayloSkills.zip` | 安装创作技能及 MCP 操作说明 |
+| `filmFraylo-windows-x64.zip` | Windows 成品，含 EXE 启动器 |
+| `filmFraylo-macos-arm64.dmg` | Apple Silicon Mac 成品 |
+| `filmFraylo-macos-x64.dmg` | Intel Mac 成品 |
+
+Skill 只下载本机对应的一种成品及其 SHA-256 校验文件。仓库还没有正式 Release 时，自动下载不可用，不会让普通用户改为编译源码。
+
+## 开源目录：供查看与审查
 
 | 目录 | 内容 |
 | --- | --- |
 | [skill/filmfraylo](skill/filmfraylo) | Codex 创作技能、五个制作阶段参考资料，以及 Windows / macOS 首次安装脚本。一个 `$filmfraylo` 入口。 |
 | [app](app) | 基于 Toonflow 定制的画布、Web、Server、官方 MCP、文件管理、媒体节点与打包源码。 |
 
-两部分都在本仓库公开，适用 [MIT 许可](LICENSE)。`.github/` 仅存放自动构建流程。业务 Skill 只在 `skill/filmfraylo` 维护；应用构建时将它与原生 MCP Skill 一起放入运行包。
+两部分都在本仓库公开，适用 [MIT 许可](LICENSE)，使用者可以检查技能行为、应用实现和构建过程。成品由 Actions 从对应提交构建，包含记录来源提交的 `buildInfo.json`。`.github/` 存放自动构建流程；成品作为 Release 附件发布，不提交进源码目录。业务 Skill 只在 `skill/filmfraylo` 维护；应用构建时将它与原生 MCP Skill 一起放入运行包。
 
-## 用户使用
+## 安装 Skill
 
 从正式 [Release](https://github.com/unrulpkk/filmfraylo/releases) 获取 `filmFrayloSkills.zip`，将其中 `filmfraylo` 和 `toonflow` 两个文件夹安装到 Codex 技能目录，再调用 `$filmfraylo`。`toonflow` 是底层 MCP 操作说明，创作仍使用一个 FilmFraylo 入口。
 
