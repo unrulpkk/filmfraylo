@@ -1,5 +1,7 @@
-param([string]$repository = '', [string]$codex = 'codex', [switch]$register, [switch]$inspect)
+param([string]$repository = '', [string]$codex = 'codex', [switch]$register, [switch]$inspect,
+  [ValidateSet('codex', 'claude', 'cursor', 'opencode', 'gemini', 'generic')][string]$harness = 'codex')
 $ErrorActionPreference = 'Stop'
+if ($register -and $harness -ne 'codex') { throw '-register is only for Codex. Other harnesses receive configuration to merge; omit -register.' }
 # Bootstrap runs before the bundled runtime exists, using Windows built-in tools.
 if ($env:OS -ne 'Windows_NT') { throw 'Use setupMac.sh on macOS.' }
 $architecture = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
@@ -9,7 +11,7 @@ if (!$repository) { $repository = (Get-Content -LiteralPath (Join-Path $PSScript
 $appParent = Join-Path $env:LOCALAPPDATA 'FilmFraylo'
 $appRoot = Join-Path $appParent 'app'
 if ($inspect) {
-  @{ platform = 'windows-x64'; asset = $asset; repository = $repository; installed = (Test-Path -LiteralPath (Join-Path $appRoot 'FilmFraylo.exe')) } | ConvertTo-Json
+  @{ harness = $harness; platform = 'windows-x64'; asset = $asset; repository = $repository; installed = (Test-Path -LiteralPath (Join-Path $appRoot 'FilmFraylo.exe')) } | ConvertTo-Json
   return
 }
 if (!(Test-Path -LiteralPath (Join-Path $appRoot 'FilmFraylo.exe'))) {
@@ -48,7 +50,20 @@ $repositoryFile = Join-Path $PSScriptRoot '../references/releaseRepository.txt'
 if (!(Get-Content -LiteralPath $repositoryFile -Raw).Trim()) {
   Copy-Item -LiteralPath (Join-Path $appRoot 'build/mcp/skills/filmfraylo/references/releaseRepository.txt') -Destination $repositoryFile
 }
-$options = @('install', '--open', '--skills', (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)), '--codex', $codex)
-if ($register) { $options += '--register' }
-& (Join-Path $appRoot 'runtime/bun.exe') (Join-Path $appRoot 'filmFraylo.js') @options
-if ($LASTEXITCODE -ne 0) { throw 'FilmFraylo setup failed. See the message above.' }
+$skills = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$runtimeCommand = Join-Path $appRoot 'runtime/bun.exe'
+$previousEncoding = $OutputEncoding
+$previousConsoleEncoding = [Console]::OutputEncoding
+try {
+  $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+  [Console]::OutputEncoding = $OutputEncoding
+  $launch = & $runtimeCommand (Join-Path $appRoot 'filmFraylo.js') start --open --skills $skills
+  if ($LASTEXITCODE -ne 0) { throw 'FilmFraylo launch failed. See the message above.' }
+  $options = @('--harness', $harness, '--app', $appRoot, '--skills', $skills, '--codex', $codex)
+  if ($register) { $options += '--register' }
+  ($launch -join "`n") | & $runtimeCommand (Join-Path $PSScriptRoot 'connectHarness.mjs') @options
+  if ($LASTEXITCODE -ne 0) { throw 'FilmFraylo MCP setup failed. Existing Skill files were preserved.' }
+} finally {
+  $OutputEncoding = $previousEncoding
+  [Console]::OutputEncoding = $previousConsoleEncoding
+}

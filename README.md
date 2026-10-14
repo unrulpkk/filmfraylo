@@ -2,11 +2,11 @@
 
 <img src="source/docs/images/logo.png" alt="FilmFraylo" width="120" />
 
-让 Codex 阅读小说、编写剧本和分镜，并通过 MCP 操作本地无限画布、图片、视频与配音节点。用户安装 Skill 后，由 Skill 从 GitHub Releases 下载对应系统的成品并启动；无需编译应用源码。
+让 Codex、Claude Code、Cursor、OpenCode 或 Gemini CLI 阅读小说、编写剧本和分镜，并通过原生 MCP 操作本地无限画布、图片、视频与配音节点。用户安装同一个 Skill 后，由 Skill 从 GitHub Releases 下载对应系统的成品并启动；无需编译应用源码。
 
 ## 安装与使用
 
-将下面这段话发送给 Codex：
+Codex 用户可发送：
 
 ```text
 $skill-installer 请将 https://github.com/unrulpkk/filmfraylo
@@ -21,7 +21,9 @@ $skill-installer 请将 https://github.com/unrulpkk/filmfraylo
 $filmfraylo 请启动本地画布，用我提供的小说.txt开始创作。
 ```
 
-Codex 检测系统 → 从 Releases 下载并校验对应制品 → 启动本地网页 → 配置 MCP → 阅读小说并操作画布。首次配置后需要重新连接 MCP。只有一个 `$filmfraylo` 创作入口，包含全书分析、角色档案、分集剧本、导演分镜、媒体生产五个阶段。
+其他 Harness 的技能目录和接入方式见 [接入说明](references/harnesses.md)。启动脚本支持 `-harness`（Windows）或 `--harness`（macOS），可选 `codex`、`claude`、`cursor`、`opencode`、`gemini`、`generic`，输出对应 MCP 配置。只有 Codex 的 `-register` / `--register` 调用 Codex CLI；其他宿主不依赖 Codex。
+
+当前 Harness 检测系统 → 从 Releases 下载并校验对应制品 → 启动本地网页 → 合并 MCP 配置 → 重连并读取小说、操作画布。只有一个 filmfraylo 创作入口，包含全书分析、角色档案、分集剧本、导演分镜、媒体生产五个阶段。配置生成成功不代表客户端已连接，需通过 `getAppState` 确认。
 
 没有 safillu Key 也能进入并创建画布；实际生成媒体时再配置。项目和素材保存在本地。未发布正式 Release 或下载失败时，Skill 会报告原因，不改为安装依赖和编译源码。
 
@@ -42,7 +44,7 @@ Codex 检测系统 → 从 Releases 下载并校验对应制品 → 启动本地
 
 ```text
 filmfraylo/
-├── SKILL.md       # Codex 读取的技能入口
+├── SKILL.md       # 各 Harness 共用的技能入口
 ├── agents/        # 技能展示配置
 ├── references/    # 五阶段专业方法和 Release 地址
 ├── scripts/       # 系统检测、成品下载和启动

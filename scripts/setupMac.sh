@@ -6,15 +6,19 @@ repository=$(tr -d '\r\n' < "$scriptRoot/../references/releaseRepository.txt")
 register=false
 inspect=false
 codex=codex
+harness=codex
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --repository) repository=$2; shift 2 ;;
     --codex) codex=$2; shift 2 ;;
+    --harness) harness=$2; shift 2 ;;
     --register) register=true; shift ;;
     --inspect) inspect=true; shift ;;
     *) printf '%s\n' "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
+case "$harness" in codex|claude|cursor|opencode|gemini|generic) ;; *) echo 'Unknown harness.' >&2; exit 1 ;; esac
+if [ "$register" = true ] && [ "$harness" != codex ]; then echo '--register is only for Codex; omit it for other harnesses.' >&2; exit 1; fi
 [ "$(uname -s)" = Darwin ] || { echo 'Use setupWindows.ps1 on Windows.' >&2; exit 1; }
 # Detect Apple Silicon even when the calling shell is running under Rosetta.
 if [ "$(/usr/sbin/sysctl -n hw.optional.arm64 2>/dev/null || true)" = 1 ]; then architecture=arm64
@@ -24,7 +28,7 @@ fi
 asset="filmFraylo-macos-$architecture.dmg"
 app="$HOME/Applications/FilmFraylo.app"
 if [ -d /Applications/FilmFraylo.app ]; then app=/Applications/FilmFraylo.app; fi
-if [ "$inspect" = true ]; then printf 'platform=macos-%s\nasset=%s\nrepository=%s\napp=%s\n' "$architecture" "$asset" "$repository" "$app"; exit 0; fi
+if [ "$inspect" = true ]; then printf 'platform=macos-%s\nasset=%s\nrepository=%s\napp=%s\nharness=%s\n' "$architecture" "$asset" "$repository" "$app" "$harness"; exit 0; fi
 if [ ! -d "$app" ]; then
   printf '%s' "$repository" | /usr/bin/grep -Eq '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$' || { echo 'Use --repository owner/repo or install the Skill ZIP from a GitHub Release.' >&2; exit 1; }
   downloadRoot=$(mktemp -d "${TMPDIR:-/tmp}/filmFraylo.XXXXXX")
@@ -54,6 +58,8 @@ installedPlatform=$(/usr/bin/plutil -extract platform raw -o - "$resources/build
 if [ -z "$(tr -d '\r\n' < "$scriptRoot/../references/releaseRepository.txt")" ]; then
   cp "$resources/build/mcp/skills/filmfraylo/references/releaseRepository.txt" "$scriptRoot/../references/releaseRepository.txt"
 fi
-set -- install --open --skills "$(dirname -- "$(dirname -- "$scriptRoot")")" --codex "$codex"
+skills=$(dirname -- "$(dirname -- "$scriptRoot")")
+launch=$("$resources/runtime/bun" "$resources/filmFraylo.js" start --open --skills "$skills")
+set -- --harness "$harness" --app "$resources" --skills "$skills" --codex "$codex"
 if [ "$register" = true ]; then set -- "$@" --register; fi
-exec "$resources/runtime/bun" "$resources/filmFraylo.js" "$@"
+printf '%s\n' "$launch" | "$resources/runtime/bun" "$scriptRoot/connectHarness.mjs" "$@"

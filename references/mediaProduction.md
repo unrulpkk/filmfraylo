@@ -1,8 +1,10 @@
 # 图片、视频与配音生产
 
-先遵循 [FilmFraylo](../SKILL.md) 和官方 Toonflow MCP Skill。Codex 负责执行；沿用已授权的模型、数量、规格和批次，不启动内置 Agent。
+先遵循 [FilmFraylo](../SKILL.md) 和官方 Toonflow MCP Skill。当前 Harness 负责执行；沿用已授权的模型、数量、规格和批次，不启动内置 Agent。
 
 ## 从计划到真实节点
+
+调用媒体模型前，遵循 [Key 与充值引导](../SKILL.md#api-key-与充值引导)：无 Key 时引导用户在本地网页填写；供应商明确提示余额不足时链接到 https://api.safillu.com 充值。配置或充值后核对任务状态，再继续未完成的生成。
 
 读取本批镜头、角色版本和已有任务状态。通过现有模型列表和 getNodeTools 获得真实 providerId/modelId、比例、分辨率、时长、声音和 voiceId 选项；无配置时报告缺项，不伪造可用模型或绕过供应商。展示具体批次及算力消耗信息（不可查时写未知）；用户已授权的同一方案直接执行，超出范围时只确认差异。
 

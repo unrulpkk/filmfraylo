@@ -1,11 +1,13 @@
 ---
 name: filmfraylo
-description: 在本地 FilmFraylo 中由 Codex 执行小说转漫剧制作，检查或启动本地 Web，选择全书分析、角色档案、分集剧本、导演分镜或媒体生产阶段。仅用于 FilmFraylo 项目，不用于一般写作或源码开发。
+description: 由 Codex、Claude Code、Cursor、OpenCode 或 Gemini CLI 等外部 Harness 在本地 FilmFraylo 执行小说转漫剧制作，连接 MCP 画布，完成全书分析、角色档案、剧本、分镜与媒体生产。仅用于 FilmFraylo 项目，不用于一般写作或源码开发。
 ---
 
 # FilmFraylo 外部 Harness
 
-Codex 负责阅读、推理、创作与工具执行。连接前读取同批安装的官方 [Toonflow MCP Skill](../toonflow/SKILL.md)；首次缺少依赖时先按下节安装。保持官方工具、工作区文件和节点契约；不调用 `runAgent`，不替换运行时，不直接写画布 JSON。
+当前外部 Harness 负责阅读、推理、创作与工具执行。连接前读取同批安装的官方 [Toonflow MCP Skill](../toonflow/SKILL.md)；首次缺少依赖时先按下节安装。保持官方工具、工作区文件和节点契约；不调用 `runAgent`，不替换运行时，不直接写画布 JSON。
+
+首次安装、切换宿主或 MCP 工具不可用时，先读取 [Harness 接入](references/harnesses.md)，确认当前宿主的 Skill 目录、配置格式和重连方式。同一 Skill 支持 Codex、Claude Code、Cursor、OpenCode、Gemini CLI；其他客户端可用标准 stdio MCP 配置，但需确认其本机执行能力。
 
 ## 首次使用与系统识别
 
@@ -13,11 +15,11 @@ Codex 负责阅读、推理、创作与工具执行。连接前读取同批安�
 
 已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据。没有本机运行入口时，按宿主系统选择安装脚本；不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
 
-- Windows：运行 `powershell -NoProfile -File <本Skill目录>/scripts/setupWindows.ps1 -register`，脚本确认 x64，下载 Windows ZIP。
-- macOS：运行 `sh <本Skill目录>/scripts/setupMac.sh --register`，脚本自动识别 Intel / Apple Silicon（包括 Rosetta），下载对应 DMG。
+- Windows：运行 `powershell -NoProfile -File <本Skill目录>/scripts/setupWindows.ps1 -harness <宿主>`，脚本确认 x64，下载 Windows ZIP。
+- macOS：运行 `sh <本Skill目录>/scripts/setupMac.sh --harness <宿主>`，脚本自动识别 Intel / Apple Silicon（包括 Rosetta），下载对应 DMG。
 - 其他系统、Windows ARM：说明当前发行包不支持，不套用 Windows 或 Mac 包。
 
-脚本的 `-inspect` / `--inspect` 只显示系统、架构、下载文件和安装位置，不下载或启动。路径作为独立命令参数传入，含空格时正确引用。Codex CLI 不在 PATH 时可使用 `-codex` / `--codex` 指定实际 CLI 路径。
+宿主参数为 `codex`、`claude`、`cursor`、`opencode`、`gemini` 或 `generic`；省略时兼容旧行为，默认为 Codex。仅 Codex 可追加 `-register` / `--register` 自动注册；其他宿主按接入说明合并输出配置，无需安装 Codex。脚本的 `-inspect` / `--inspect` 只显示系统、架构、下载文件、宿主和安装位置，不下载或启动。路径作为独立命令参数传入，含空格时正确引用。Codex CLI 不在 PATH 时可使用 `-codex` / `--codex` 指定实际 CLI 路径。
 
 本仓库根目录就是 FilmFraylo Skill。应用制品只从 [GitHub Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 获取；不要使用 GitHub 自动生成的 Source code ZIP/TAR，也不要从 Actions 临时 artifact 下载。脚本读取 `references/releaseRepository.txt`，使用 `https://github.com/<repository>/releases/latest/download/<asset>`：Windows 对应 `filmFraylo-windows-x64.zip`，Mac 对应 `filmFraylo-macos-arm64.dmg` 或 `filmFraylo-macos-x64.dmg`，先校验同名 `.sha256` 再安装。
 
@@ -25,16 +27,30 @@ Codex 负责阅读、推理、创作与工具执行。连接前读取同批安�
 
 安装后打开本地 Web，重新连接 MCP 再创作。macOS 如被系统安全提示阻止，交由用户处理，不自动关闭 Gatekeeper 或清除隔离属性。无模型 Key 可以进入画布，实际生成前再配置 safillu。
 
+## API Key 与充值引导
+
+官网及充值入口统一使用 https://api.safillu.com。需要获取 Key 或充值时提供可点击链接；未核实具体页面路径时只使用该首页，不猜测登录、令牌或支付页面地址。
+
+- 无 Key 也可进入画布，由当前 Harness 分析小说、编写剧本和分镜、创建或配置节点；不把充值作为这些步骤的前置条件。
+- 首次准备调用图片、视频或配音模型时，若未配置 Key，引导用户在官网获取 API Key，再到本地 FilmFraylo「设置 → 媒体模型 → safillu → 编辑模型」填写 API Key 并保存。首次欢迎页也可填写或选择稍后配置。默认服务地址为 `https://api.safillu.com`。
+- Key 由用户直接填入本地网页，不要求粘贴到聊天里，不回显 Key，也不把它写入剧本、画布文本、日志或 productionState.md。检查状态时优先使用不返回密钥的模型或配置状态接口。
+- 只有供应商明确返回余额或额度不足时才引导到官网充值；认证失败先检查 Key 和权限，网络错误、限流或模型不可用按真实错误处理，不一律要求充值。不编造余额、套餐、价格或预计费用。
+- 充值金额与支付由用户在官网自行完成。用户确认已配置或已充值后，先核对现有任务状态，再继续已授权且尚未完成的生成；保留节点及结果，不重复提交。没有可用的免费验证接口时，不用付费生成偷偷测试 Key。
+
+需要 Key 时可提示：
+
+> 接下来生成图片、视频或配音需要 safillu API Key。请到 [safillu 官网](https://api.safillu.com) 获取 Key，在本地 FilmFraylo 的「设置 → 媒体模型 → safillu → 编辑模型」中填写并保存。如果账户余额不足，可在同一网站充值。请直接在网页填写 Key，无需发给我；完成后告诉我，我们继续当前任务。
+
 ## 启动与定位
 
 1. 先调用官方 MCP `getAppState`。工具缺失或服务离线时，若已存在安装器生成的 [本机启动入口](references/localRuntime.md)，执行其中命令数组；没有则执行上面的成品安装流程。仅当用户明确选择源码开发环境时，在应用根目录执行 `bun run install:filmFraylo`。
 2. 启动脚本检查目标目录和端口，只启动缺失服务。输出包含网页地址、runtime 路径和Skill 安装状态；不读取或输出 runtime 中的 token。Skill 不会让本轮尚未注册的 MCP 工具自动出现，首次配置后需要重新连接 MCP。
 3. 用浏览器打开脚本返回的 Web 地址并打开本地项目，再 `getAppState` 取得实际 connectionId、directory、canvasId。连接属于其他项目时使用官方 `openProject`，完成后刷新目标；不借用其他实例。
-4. 通过 resources/list/read 发现当前 Toonflow 的 workflow 及需要的资料，尊重用户已修改版本。内置工作流的提问映射到 Codex 对话，创作和调用均由 Codex 完成。
+4. 宿主支持时，通过 resources/list/read 发现当前 Toonflow 的 workflow 及需要的资料，尊重用户已修改版本；缺少 resources 能力时按 Harness 接入说明处理。内置工作流的提问映射到当前宿主对话，创作和调用均由当前 Harness 完成。
 
 ## 选择当前阶段
 
-这是一个 Skill 的五个制作阶段，不是五个独立 Skill。Codex 根据任务和 productionState.md 按需读取对应参考文档，已确认的成果直接接续；用户只需调用 $filmfraylo，无需切换入口。
+这是一个 Skill 的五个制作阶段，不是五个独立 Skill。当前 Harness 根据任务和 productionState.md 按需读取对应参考文档，已确认的成果直接接续；用户只需调用 filmfraylo 技能，无需切换入口。调用语法使用当前宿主支持的方式。
 
 | 任务 | 阶段参考 | 主要交付 |
 | --- | --- | --- |
