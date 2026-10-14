@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.14
+FROM oven/bun:1.4.3
 
 WORKDIR /app
 
@@ -6,7 +6,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY app .
+COPY skill /skill
 
 # ACT: 保留工作区与依赖以兼容运行时动态加载；需要缩减镜像时再拆分构建阶段。
 RUN bun install --frozen-lockfile

@@ -1,39 +1,39 @@
 # FilmFraylo
 
-<img src="docs/images/logo.png" alt="FilmFraylo" width="120" />
+<img src="app/docs/images/logo.png" alt="FilmFraylo" width="120" />
 
-本地小说与漫剧创作工具，保留无限画布、节点连线、工作区文件管理和图片、视频、音频生产能力。支持由 Codex 通过 MCP 操作画布，项目与素材保存在本地。
+开源的小说转漫剧技能与本地画布应用。Codex 执行创作技能，通过 MCP 操作无限画布、节点与媒体生成；项目和素材保存在用户本地。
 
-## 源码运行
+## 两部分源码
 
-需要 Bun 1.4.3。
+| 目录 | 内容 |
+| --- | --- |
+| [skill/filmfraylo](skill/filmfraylo) | Codex 创作技能、五个制作阶段参考资料，以及 Windows / macOS 首次安装脚本。一个 `$filmfraylo` 入口。 |
+| [app](app) | 基于 Toonflow 定制的画布、Web、Server、官方 MCP、文件管理、媒体节点与打包源码。 |
+
+两部分都在本仓库公开，适用 [MIT 许可](LICENSE)。`.github/` 仅存放自动构建流程。业务 Skill 只在 `skill/filmfraylo` 维护；应用构建时将它与原生 MCP Skill 一起放入运行包。
+
+## 用户使用
+
+从正式 [Release](https://github.com/unrulpkk/filmfraylo/releases) 获取 `filmFrayloSkills.zip`，将其中 `filmfraylo` 和 `toonflow` 两个文件夹安装到 Codex 技能目录，再调用 `$filmfraylo`。`toonflow` 是底层 MCP 操作说明，创作仍使用一个 FilmFraylo 入口。
+
+也可以让 Codex 从本仓库的 `skill/filmfraylo` 路径安装开源技能。首次使用脚本按系统和架构下载对应运行包、校验并启动本地网页，再配置 MCP。自动下载需要仓库已有正式 Release；只有源码或 Actions 构建产物时尚不能自动下载。
+
+没有 safillu Key 也能进入并创建画布；生成图片、视频或配音时再配置 Key。Mac 包尚未接入 Apple 签名与公证，详见 [Mac 说明](app/docs/macPackage.md)。
+
+## 开发与构建
+
+克隆整个仓库，需要 Bun 1.4.3。应用命令在 `app` 目录执行：
 
 ```sh
+cd app
 bun install --frozen-lockfile
 bun run build:server
 bun run start:filmFraylo
 ```
 
-源码新安装默认数据目录为 `data/filmFraylo`；检测到旧 `data/myToonflow/settings.json` 时继续沿用旧目录。自定义端口或数据目录可使用 --port 和 --data。
+Windows 执行 `bun run package:windows`，Mac 执行 `bun run package:mac`，输出在 `app/dist/`；`bun run package:skills` 生成独立技能压缩包。
 
-安装 Codex Skill、MCP 和本地 Web 运行包说明见 [本地使用说明](docs/filmFraylo.md)。媒体供应商只开放 safillu。内部工作区包名和数据格式保留兼容，不影响已保存项目。
+推送到 `main` 自动构建 Windows ZIP、Apple Silicon DMG、Intel DMG 和 Skill 包；也可手动运行 [Actions](https://github.com/unrulpkk/filmfraylo/actions)。推送 `v*` 标签会在构建成功后创建 Release 草稿。
 
-## Windows 成品与 GitHub 发布
-
-运行包自带 Bun，解压后双击 `FilmFraylo.exe` 启动本地 Web。没有 Key 也能进入和使用画布，实际调用生成服务时再配置。
-
-- [运行包使用说明](docs/windowsPackage.md)
-- [提交源码、自动构建与发布步骤](docs/githubRelease.md)
-- 本地打包：`bun run package:windows`
-
-GitHub Actions 支持手动构建；推送 `v*` 版本标签会自动构建并创建 Release 草稿。压缩包附带 SHA-256 校验文件，公开仓库另提供构建来源证明。
-
-## 许可
-
-本项目基于 MIT 许可代码进行定制，原始版权与许可声明保留于 [LICENSE](LICENSE)。
-
-## macOS 与首次使用
-
-Windows 分发 ZIP，Apple Silicon 与 Intel Mac 分别分发 DMG。GitHub Actions 会构建三种包和 `filmFrayloSkills.zip`，统一放入 Release 草稿。用户安装 Skill 后，Codex 按系统选择首次安装脚本，自动匹配架构；已有安装则直接启动。
-
-仓库地址由 GitHub 构建自动写入。源码中的地址为空，不能在仓库发布前自动下载。macOS 包继续使用本地 Web + Server，项目保存在用户数据目录；Mac 的实际构建与签名限制见 [macOS 说明](docs/macPackage.md)。
+详见 [应用说明](app/README.md)、[发布步骤](app/docs/githubRelease.md)。

@@ -2,7 +2,7 @@
 
 ## 仓库根目录
 
-将当前 **app 文件夹内的内容**作为 GitHub 仓库根目录：根目录应直接包含 `package.json`、`bun.lock`、`apps/`、`packages/` 和 `.github/workflows/releasePackages.yml`。不要再套一层 app，否则工作流无法在默认位置找到构建脚本。
+仓库根目录包含 `skill/` 与 `app/`：`skill/filmfraylo` 是开源业务 Skill，`app` 是本地画布与服务源码。`.github/workflows/releasePackages.yml` 位于仓库根目录；Actions 在 `app` 内运行构建命令，从 `app/dist/` 上传产物。请克隆完整仓库，应用构建需要同级的 `skill` 源码。
 
 `.gitignore` 排除 `.env`、数据目录、工作区、构建产物、依赖、日志和临时文件。请通过 Git 提交源码，不要把整个工作目录拖到网页上传。密钥不应写入源码。此项目的 Windows 本地 Web 构建无需私有桌面 SDK，也无需任何 safillu API Key。
 
@@ -51,6 +51,7 @@ gh attestation verify .\filmFraylo-2.0.0-windows-x64.zip --repo YOUR_ACCOUNT/YOU
 在 Windows x64 安装 Bun 1.4.3 后：
 
 ```powershell
+cd app
 bun install --frozen-lockfile
 bun run package:windows
 ```
@@ -65,7 +66,7 @@ bun run package:windows
 
 ## 首次使用自动匹配系统
 
-GitHub 构建自动把 `GITHUB_REPOSITORY` 写入发行包及 Skill 的 `references/releaseRepository.txt`，无需现在预填仓库地址。源码中的此文件保持为空，不绑定开发者个人仓库。
+源码 Skill 的 `references/releaseRepository.txt` 指向 `unrulpkk/filmfraylo`。GitHub 构建优先把 `GITHUB_REPOSITORY` 写入发行包中的 Skill，fork 后构建会使用 fork 自己的仓库地址；源码直接安装时需相应修改该文件或传入 `-repository` / `--repository`。
 
 用户安装 Release 的 `filmFrayloSkills.zip` 后调用 `$filmfraylo`，首次使用选择对应系统脚本；脚本读取真实仓库地址，只下载当前系统和架构的文件，并校验 SHA-256。没有运行环境时先安装对应包，已有本机运行入口则直接复用。
 
