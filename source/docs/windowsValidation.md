@@ -4,10 +4,12 @@
 
 - Windows 原生 Electrobun 构建、桌面 ZIP 与独立 Web ZIP 打包成功。桌面安装在 `~/.filmfraylo/desktop`，实际启动独立 FilmFraylo 窗口，未调用浏览器打开命令。
 - 桌面原生 stdio MCP initialize、tools/list、getAppState 调用成功：46 个工具、没有 runAgent，取得实际桌面页面连接。重复启动复用同一实例。默认无模型 Key；没有提交收费生成请求。
+- 首次启动直接进入项目首页，helloCompleted 未设置且文本/媒体 Key 均为空时，MCP 打开本地目录、创建画布、添加文本节点、保存和读取文件均成功；页面显示正常。外部 Harness 模式隐藏首页内置 Agent 的模型选择框。
+- 修复 `.filmfraylo` 安装目录下节点脚本被隐藏路径规则拒绝的问题，节点读取 HTTP 200，8 种节点可发现。Web、Server 类型检查及原生桌面构建通过。
 - 六种 Harness（Codex、Claude Code、Cursor、OpenCode、Gemini CLI、WorkBuddy）及 generic 的配置输出已解析核对，路径指向真实桌面桥接文件，保留 --external。Windows 六种宿主 × desktop/web 的平台包选择检查通过。
 - JSONC 合并检查覆盖注释、其他配置、尾随逗号、重复执行、同名冲突及重复键；原生桌面 typecheck 通过。没有改写用户其他宿主的真实配置来冒充客户端端到端测试。
 - 桌面、Web、通用 Skill、WorkBuddy Skill 四个 ZIP 的 CRC、SHA256 和关键文件检查通过。Web 包不含 FilmFraylo.exe 浏览器启动器；技能独立包与当前源码一致。
-- 项目内和 WorkBuddy 本机 Skill 已同步并通过元数据校验。Mac 脚本通过语法检查，工作流配置包含 Intel / Apple Silicon 原生构建；尚未在真实 Mac 或 GitHub Actions 运行本次修改。
+- 项目内和 WorkBuddy 本机 Skill 已同步并通过元数据校验。Mac 脚本通过语法检查；三平台 Actions 构建结果以该版本的工作流记录为准。本地运行验证仅覆盖 Windows，不能将 Mac 构建成功视为真实 Mac 客户端验收。
 
 下方保留的是旧 Web 启动器阶段的历史记录，不代表本次桌面版及最新发布状态。
 
