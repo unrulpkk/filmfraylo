@@ -6,7 +6,7 @@
 
 ## 源码运行
 
-需要 Bun 1.4.3。请克隆整个仓库，在本目录 `app/` 执行以下命令；构建会读取同级 [skill/filmfraylo](../skill/filmfraylo) 的开源技能。
+需要 Bun 1.4.3。请克隆整个仓库，在本目录 `source/` 执行以下命令；构建会读取仓库根目录的 [SKILL.md](../SKILL.md)、`agents/`、`references/` 和 `scripts/`。
 
 ```sh
 bun install --frozen-lockfile
@@ -14,7 +14,7 @@ bun run build:server
 bun run start:filmFraylo
 ```
 
-Docker Compose 同样在 `app/` 内运行 `docker compose up --build`；它以仓库根目录为构建上下文，包含同级技能源码。
+Docker Compose 同样在 `source/` 内运行 `docker compose up --build`；它以仓库根目录为构建上下文，包含根目录技能文件。
 
 源码新安装默认数据目录为 `data/filmFraylo`；检测到旧 `data/myToonflow/settings.json` 时继续沿用旧目录。自定义端口或数据目录可使用 --port 和 --data。
 
@@ -28,7 +28,7 @@ Docker Compose 同样在 `app/` 内运行 `docker compose up --build`；它以�
 - [提交源码、自动构建与发布步骤](docs/githubRelease.md)
 - 本地打包：`bun run package:windows`
 
-GitHub Actions 支持手动构建；推送 `v*` 版本标签会自动构建并创建 Release 草稿。压缩包附带 SHA-256 校验文件，公开仓库另提供构建来源证明。
+GitHub Actions 支持手动构建；推送 `v*` 版本标签会自动构建并发布到 Releases。压缩包附带 SHA-256 校验文件，公开仓库另提供构建来源证明。
 
 ## 许可
 
@@ -36,6 +36,6 @@ GitHub Actions 支持手动构建；推送 `v*` 版本标签会自动构建并�
 
 ## macOS 与首次使用
 
-Windows 分发 ZIP，Apple Silicon 与 Intel Mac 分别分发 DMG。GitHub Actions 会构建三种包和 `filmFrayloSkills.zip`，统一放入 Release 草稿。用户安装 Skill 后，Codex 按系统选择首次安装脚本，自动匹配架构；已有安装则直接启动。
+Windows 分发 ZIP，Apple Silicon 与 Intel Mac 分别分发 DMG。推送版本标签后，GitHub Actions 会构建三种包和 `filmFrayloSkills.zip`，统一发布到 Releases。用户安装 Skill 后，Codex 从 Releases 下载对应系统的成品；已有安装则直接启动。
 
 源码技能指向 `unrulpkk/filmfraylo`，GitHub 构建会写入实际构建仓库地址；正式 Release 发布前不能自动下载。macOS 包继续使用本地 Web + Server，项目保存在用户数据目录；Mac 的实际构建与签名限制见 [macOS 说明](docs/macPackage.md)。

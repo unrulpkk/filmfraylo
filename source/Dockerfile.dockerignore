@@ -1,8 +1,13 @@
 **
-!app/
-!app/**
-!skill/
-!skill/**
+!source/
+!source/**
+!SKILL.md
+!agents/
+!agents/**
+!references/
+!references/**
+!scripts/
+!scripts/**
 **/node_modules
 **/dist
 **/build

@@ -9,7 +9,7 @@ Codex 负责阅读、推理、创作与工具执行。连接前读取同批安�
 
 ## 首次使用与系统识别
 
-普通用户只安装 Skill，由本 Skill 下载已经编译好的应用成品。无需克隆 `app/`、安装开发依赖或执行源码构建；仓库源码用于查看与审查。没有正式 Release、对应平台附件缺失或下载失败时，报告具体原因，不自动改走源码安装。仅在用户明确要求源码开发或自编译时使用开发流程。
+普通用户只安装 Skill，由本 Skill 下载已经编译好的应用成品。无需克隆 `source/`、安装开发依赖或执行源码构建；仓库源码用于查看与审查。没有正式 Release、对应平台附件缺失或下载失败时，报告具体原因，不自动改走源码安装。仅在用户明确要求源码开发或自编译时使用开发流程。
 
 已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据。没有本机运行入口时，按宿主系统选择安装脚本；不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
 
@@ -19,7 +19,9 @@ Codex 负责阅读、推理、创作与工具执行。连接前读取同批安�
 
 脚本的 `-inspect` / `--inspect` 只显示系统、架构、下载文件和安装位置，不下载或启动。路径作为独立命令参数传入，含空格时正确引用。Codex CLI 不在 PATH 时可使用 `-codex` / `--codex` 指定实际 CLI 路径。
 
-优先安装 Release 的 `filmFrayloSkills.zip`，其中包含官方 Skill 依赖与构建时填入的仓库地址。源码 Skill 的地址为空时，使用用户提供或该源码仓库已验证的 GitHub 地址，以 `-repository owner/repo` / `--repository owner/repo` 传入；没有地址则询问，不能猜测下载源。下载仅来自该仓库的正式 latest Release，先校验 SHA-256，再安装；不会覆盖已有应用或已修改的 Skill。安装冲突时保留现有内容，核对 Skill 与运行包版本。
+本仓库根目录就是 FilmFraylo Skill。应用制品只从 [GitHub Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 获取；不要使用 GitHub 自动生成的 Source code ZIP/TAR，也不要从 Actions 临时 artifact 下载。脚本读取 `references/releaseRepository.txt`，使用 `https://github.com/<repository>/releases/latest/download/<asset>`：Windows 对应 `filmFraylo-windows-x64.zip`，Mac 对应 `filmFraylo-macos-arm64.dmg` 或 `filmFraylo-macos-x64.dmg`，先校验同名 `.sha256` 再安装。
+
+单独安装 Skill 也可使用同一 Release 的 `filmFrayloSkills.zip`，包含官方 MCP Skill 依赖。仓库地址为空时，使用用户提供或已验证的 GitHub 地址，以 `-repository owner/repo` / `--repository owner/repo` 传入；不能猜测下载源。不会覆盖已有应用或已修改的 Skill；安装冲突时保留现有内容，核对 Skill 与运行包版本。
 
 安装后打开本地 Web，重新连接 MCP 再创作。macOS 如被系统安全提示阻止，交由用户处理，不自动关闭 Gatekeeper 或清除隔离属性。无模型 Key 可以进入画布，实际生成前再配置 safillu。
 

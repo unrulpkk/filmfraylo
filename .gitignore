@@ -1,4 +1,4 @@
-# Only publish the two source trees and repository metadata.
+# Publish the root Skill, application source, and repository metadata.
 /*
 !/.github/
 !/.gitattributes
@@ -6,8 +6,11 @@
 !/AGENTS.md
 !/LICENSE
 !/README.md
-!/app/
-!/skill/
+!/SKILL.md
+!/agents/
+!/references/
+!/scripts/
+!/source/
 
 # Local installation metadata and credentials never belong in source Skills.
 **/.env

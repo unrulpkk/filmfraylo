@@ -1,54 +1,64 @@
-# FilmFraylo
+# FilmFraylo Skill
 
-<img src="app/docs/images/logo.png" alt="FilmFraylo" width="120" />
+<img src="source/docs/images/logo.png" alt="FilmFraylo" width="120" />
 
-开源的小说转漫剧技能与本地画布应用。Codex 执行创作技能，通过 MCP 操作无限画布、节点与媒体生成；项目和素材保存在用户本地。
+让 Codex 阅读小说、编写剧本和分镜，并通过 MCP 操作本地无限画布、图片、视频与配音节点。用户安装 Skill 后，由 Skill 从 GitHub Releases 下载对应系统的成品并启动；无需编译应用源码。
 
-## 用户使用：Skill 下载成品
+## 安装与使用
 
-用户安装 `$filmfraylo` 后，Codex 检测本机是否已有应用；没有则按 Windows / Apple Silicon Mac / Intel Mac 下载已编译成品，校验后安装并打开本地画布。成品自带运行环境，用户无需克隆应用源码、安装开发依赖或执行编译。随后提供小说 `.txt`，即可由 Codex 开始分析、创建画布和配置节点。
+将下面这段话发送给 Codex：
 
-成品放在 GitHub [Releases](https://github.com/unrulpkk/filmfraylo/releases)，与源码分开分发：
+```text
+$skill-installer 请将 https://github.com/unrulpkk/filmfraylo
+仓库根目录的 Skill 安装为 filmfraylo。
+```
 
-| 下载项 | 用途 |
+也可从 [Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 下载 `filmFrayloSkills.zip`，其中包含 `filmfraylo` 创作技能与 `toonflow` 底层 MCP 操作说明。独立技能包不包含应用源码。
+
+安装后调用：
+
+```text
+$filmfraylo 请启动本地画布，用我提供的小说.txt开始创作。
+```
+
+Codex 检测系统 → 从 Releases 下载并校验对应制品 → 启动本地网页 → 配置 MCP → 阅读小说并操作画布。首次配置后需要重新连接 MCP。只有一个 `$filmfraylo` 创作入口，包含全书分析、角色档案、分集剧本、导演分镜、媒体生产五个阶段。
+
+没有 safillu Key 也能进入并创建画布；实际生成媒体时再配置。项目和素材保存在本地。未发布正式 Release 或下载失败时，Skill 会报告原因，不改为安装依赖和编译源码。
+
+## 成品下载
+
+编译好的制品由 GitHub Actions 发布到 [Releases](https://github.com/unrulpkk/filmfraylo/releases)。Skill 只下载本机对应的一种应用包及其 `.sha256` 校验文件：
+
+| 系统 | Release 附件 |
 | --- | --- |
-| `filmFrayloSkills.zip` | 安装创作技能及 MCP 操作说明 |
-| `filmFraylo-windows-x64.zip` | Windows 成品，含 EXE 启动器 |
-| `filmFraylo-macos-arm64.dmg` | Apple Silicon Mac 成品 |
-| `filmFraylo-macos-x64.dmg` | Intel Mac 成品 |
+| Windows x64 | `filmFraylo-windows-x64.zip`（含 EXE 启动器） |
+| Apple Silicon Mac | `filmFraylo-macos-arm64.dmg` |
+| Intel Mac | `filmFraylo-macos-x64.dmg` |
+| 单独安装技能 | `filmFrayloSkills.zip` |
 
-Skill 只下载本机对应的一种成品及其 SHA-256 校验文件。仓库还没有正式 Release 时，自动下载不可用，不会让普通用户改为编译源码。
+应用包自带运行环境。GitHub 自动生成的 **Source code** ZIP/TAR 是源码，不是可运行成品。当前未配置 Windows 代码签名及 Apple 签名、公证；Mac 的安装限制见 [说明](source/docs/macPackage.md)。
 
-## 开源目录：供查看与审查
+## 仓库结构
 
-| 目录 | 内容 |
-| --- | --- |
-| [skill/filmfraylo](skill/filmfraylo) | Codex 创作技能、五个制作阶段参考资料，以及 Windows / macOS 首次安装脚本。一个 `$filmfraylo` 入口。 |
-| [app](app) | 基于 Toonflow 定制的画布、Web、Server、官方 MCP、文件管理、媒体节点与打包源码。 |
+```text
+filmfraylo/
+├── SKILL.md       # Codex 读取的技能入口
+├── agents/        # 技能展示配置
+├── references/    # 五阶段专业方法和 Release 地址
+├── scripts/       # 系统检测、成品下载和启动
+├── source/        # 本地画布、Web、Server、MCP 与节点源码
+└── .github/       # 自动构建及 Release 发布流程
+```
 
-两部分都在本仓库公开，适用 [MIT 许可](LICENSE)，使用者可以检查技能行为、应用实现和构建过程。成品由 Actions 从对应提交构建，包含记录来源提交的 `buildInfo.json`。`.github/` 存放自动构建流程；成品作为 Release 附件发布，不提交进源码目录。业务 Skill 只在 `skill/filmfraylo` 维护；应用构建时将它与原生 MCP Skill 一起放入运行包。
+技能和应用均开源，供使用者审查，适用 [MIT 许可](LICENSE)。成品包含记录对应提交的 `buildInfo.json`，公开仓库构建还生成来源证明。源码不参与普通用户的安装和运行流程。
 
-## 安装 Skill
-
-从正式 [Release](https://github.com/unrulpkk/filmfraylo/releases) 获取 `filmFrayloSkills.zip`，将其中 `filmfraylo` 和 `toonflow` 两个文件夹安装到 Codex 技能目录，再调用 `$filmfraylo`。`toonflow` 是底层 MCP 操作说明，创作仍使用一个 FilmFraylo 入口。
-
-也可以让 Codex 从本仓库的 `skill/filmfraylo` 路径安装开源技能。首次使用脚本按系统和架构下载对应运行包、校验并启动本地网页，再配置 MCP。自动下载需要仓库已有正式 Release；只有源码或 Actions 构建产物时尚不能自动下载。
-
-没有 safillu Key 也能进入并创建画布；生成图片、视频或配音时再配置 Key。Mac 包尚未接入 Apple 签名与公证，详见 [Mac 说明](app/docs/macPackage.md)。
-
-## 开发与构建
-
-克隆整个仓库，需要 Bun 1.4.3。应用命令在 `app` 目录执行：
+开发者克隆完整仓库后，在 `source/` 使用 Bun 1.4.3：
 
 ```sh
-cd app
+cd source
 bun install --frozen-lockfile
 bun run build:server
 bun run start:filmFraylo
 ```
 
-Windows 执行 `bun run package:windows`，Mac 执行 `bun run package:mac`，输出在 `app/dist/`；`bun run package:skills` 生成独立技能压缩包。
-
-推送到 `main` 自动构建 Windows ZIP、Apple Silicon DMG、Intel DMG 和 Skill 包；也可手动运行 [Actions](https://github.com/unrulpkk/filmfraylo/actions)。推送 `v*` 标签会在构建成功后创建 Release 草稿。
-
-详见 [应用说明](app/README.md)、[发布步骤](app/docs/githubRelease.md)。
+推送 `main` 可验证三平台构建；推送 `v*` 标签将在构建成功后自动发布 Release。正式标签提供 Skill 使用的 latest 下载；带后缀标签自动发布为预发布版。详见 [应用说明](source/README.md) 与 [发布步骤](source/docs/githubRelease.md)。

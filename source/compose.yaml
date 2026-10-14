@@ -2,7 +2,7 @@ services:
   toonflow:
     build:
       context: ..
-      dockerfile: app/Dockerfile
+      dockerfile: source/Dockerfile
     init: true
     restart: unless-stopped
     ports:

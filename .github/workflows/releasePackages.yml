@@ -34,7 +34,7 @@ jobs:
     defaults:
       run:
         shell: pwsh
-        working-directory: app
+        working-directory: source
     steps:
       - name: Checkout exact source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -73,16 +73,16 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: |
-            app/dist/*.zip
-            app/dist/*.dmg
+            source/dist/*.zip
+            source/dist/*.dmg
       - name: Upload downloadable artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: filmFraylo-${{ matrix.platform }}
           path: |
-            app/dist/*.zip
-            app/dist/*.dmg
-            app/dist/*.sha256
+            source/dist/*.zip
+            source/dist/*.dmg
+            source/dist/*.sha256
           if-no-files-found: error
           compression-level: 0
 
@@ -99,7 +99,10 @@ jobs:
           pattern: filmFraylo-*
           path: release
           merge-multiple: true
-      - name: Create one release draft
+      - name: Publish release packages
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --draft --title "FilmFraylo $GITHUB_REF_NAME"
+        run: |
+          options=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then options+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "FilmFraylo $GITHUB_REF_NAME" "${options[@]}"

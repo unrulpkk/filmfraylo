@@ -6,8 +6,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-COPY app .
-COPY skill /skill
+COPY source .
+COPY SKILL.md /SKILL.md
+COPY agents /agents
+COPY references /references
+COPY scripts /scripts
 
 # ACT: 保留工作区与依赖以兼容运行时动态加载；需要缩减镜像时再拆分构建阶段。
 RUN bun install --frozen-lockfile

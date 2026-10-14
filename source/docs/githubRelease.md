@@ -8,7 +8,7 @@ Actions 的 artifact 用于构建验收，不能代替 `releases/latest/download
 
 ## 仓库根目录
 
-仓库根目录包含 `skill/` 与 `app/`：`skill/filmfraylo` 是开源业务 Skill，`app` 是本地画布与服务源码。`.github/workflows/releasePackages.yml` 位于仓库根目录；Actions 在 `app` 内运行构建命令，从 `app/dist/` 上传产物。请克隆完整仓库，应用构建需要同级的 `skill` 源码。
+仓库根目录就是开源 Skill，包含 `SKILL.md`、`agents/`、`references/`、`scripts/`；应用源码放在 `source/`。`.github/workflows/releasePackages.yml` 位于仓库根目录；Actions 在 `source` 内运行构建命令，从 `source/dist/` 上传产物。请克隆完整仓库，构建只复制明确列出的根目录 Skill 文件，不会将应用源码打入技能压缩包。
 
 `.gitignore` 排除 `.env`、数据目录、工作区、构建产物、依赖、日志和临时文件。请通过 Git 提交源码，不要把整个工作目录拖到网页上传。密钥不应写入源码。此项目的 Windows 本地 Web 构建无需私有桌面 SDK，也无需任何 safillu API Key。
 
@@ -37,7 +37,7 @@ git tag v2.0.0
 git push origin v2.0.0
 ```
 
-标签触发三平台自动构建，全部完成后统一创建一份 Release **草稿**。附件包含 Windows ZIP、两种架构的 macOS DMG、filmFrayloSkills.zip 和各自的 SHA-256 文件。检查下载包后点击 Publish release，用户即可下载。预发布版本可以使用 `v2.0.1-preview.1`，在草稿中勾选预发布。
+标签触发三平台自动构建，全部完成后自动发布一份 Release。附件包含 Windows ZIP、两种架构的 macOS DMG、filmFrayloSkills.zip 和各自的 SHA-256 文件。正式标签如 `v2.0.0` 发布后可供 Skill 自动下载；带后缀的标签如 `v2.0.1-preview.1` 自动标为预发布，不进入正式 latest 下载入口。
 
 不要在相同标签上替换源码。发布修复时使用新版本标签。已有同名 Release 时工作流不会覆盖附件，可从 Actions 下载产物处理失败原因后再发布。
 
@@ -57,7 +57,7 @@ gh attestation verify .\filmFraylo-2.0.0-windows-x64.zip --repo YOUR_ACCOUNT/YOU
 在 Windows x64 安装 Bun 1.4.3 后：
 
 ```powershell
-cd app
+cd source
 bun install --frozen-lockfile
 bun run package:windows
 ```
