@@ -8,6 +8,7 @@ type Release = { id: number; tag_name: string; name: string; body: string | null
 const githubRepository = process.env.GITHUB_REPOSITORY ?? "";
 const giteeRepository = process.env.GITEE_REPOSITORY ?? "";
 const tag = process.env.RELEASE_TAG ?? "";
+const syncMode = process.env.RELEASE_SYNC_MODE;
 const tokens = { github: process.env.GITHUB_TOKEN, gitee: process.env.GITEE_TOKEN };
 const bases = { github: "https://api.github.com", gitee: "https://gitee.com/api/v5" };
 const githubPath = `/repos/${githubRepository}`;
@@ -24,7 +25,7 @@ async function request(provider: Provider, path: string, options: RequestInit = 
     try {
       let url = sourceUrl;
       const redirectHeaders = new Headers(headers);
-      const signal = AbortSignal.timeout(15 * 60 * 1000);
+      const signal = AbortSignal.timeout(headers.get("Accept") === "application/octet-stream" ? 2 * 60 * 60 * 1000 : 60 * 1000);
       for (let redirect = 0; redirect <= 5; redirect++) {
         const response = await fetch(url, { ...options, headers: redirectHeaders, redirect: "manual", signal });
         if ([301, 302, 303, 307, 308].includes(response.status)) {
@@ -96,10 +97,10 @@ function git(args: string[]): string {
 
 function upload(path: string, asset: Attachment, bytes: Uint8Array): Attachment {
   // curl provides transfer progress and aborts stalled uploads without retrying uncertain writes.
-  const result = spawnSync("curl", ["--fail", "--show-error", "--connect-timeout", "30", "--max-time", "900",
+  const result = spawnSync("curl", ["--fail", "--show-error", "--connect-timeout", "30", "--max-time", "7200",
     "--speed-limit", "1024", "--speed-time", "60", "--header", `Authorization: Bearer ${tokens.gitee}`,
     "--form", `file=@-;filename=${asset.name};type=application/octet-stream`, `${bases.gitee}${path}`], {
-    input: bytes, encoding: "utf8", shell: false, timeout: 16 * 60 * 1000,
+    input: bytes, encoding: "utf8", shell: false, timeout: 125 * 60 * 1000,
     maxBuffer: 1024 * 1024, stdio: ["pipe", "pipe", "inherit"],
   });
   if (result.error || result.status !== 0) throw new Error(`Gitee upload failed for ${asset.name} (curl exit ${result.status}); rerun to reconcile completed attachments`);
@@ -123,6 +124,7 @@ function syncTag(commit: string) {
 }
 
 async function main() {
+  if (syncMode !== "prepare" && syncMode !== "asset") throw new Error("RELEASE_SYNC_MODE must be prepare or asset");
   for (const repository of [githubRepository, giteeRepository]) {
     if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) throw new Error("Set GITHUB_REPOSITORY and GITEE_REPOSITORY to owner/repo");
   }
@@ -141,9 +143,12 @@ async function main() {
   for (const name of required) {
     if (!byName.has(name) || !byName.has(`${name}.sha256`)) throw new Error(`GitHub Release is incomplete: missing ${name} or its SHA256 file`);
   }
+  const selected = syncMode === "prepare" ? assets : [byName.get(process.env.RELEASE_ASSET ?? ""), byName.get(`${process.env.RELEASE_ASSET}.sha256`)];
+  if (selected.some(asset => !asset)) throw new Error("RELEASE_ASSET must name a release package with a SHA256 file");
+  const selectedAssets = selected as Attachment[];
   const hashes = new Map<string, string>();
   const checksumBytes = new Map<string, Uint8Array<ArrayBuffer>>();
-  for (const asset of assets) {
+  for (const asset of selectedAssets) {
     if (!/\.(zip|dmg|exe)(\.sha256)?$/.test(asset.name)) throw new Error(`Unsupported release attachment: ${asset.name}`);
     if (!asset.name.endsWith(".sha256")) continue;
     if (asset.size > 4096) throw new Error(`Invalid SHA256 file size: ${asset.name}`);
@@ -155,16 +160,17 @@ async function main() {
     hashes.set(asset.name, sha256(bytes));
     checksumBytes.set(asset.name, bytes);
   }
-  for (const asset of assets) {
+  for (const asset of selectedAssets) {
     if (!hashes.has(asset.name)) throw new Error(`Missing SHA256 for ${asset.name}`);
     if (asset.digest && asset.digest !== `sha256:${hashes.get(asset.name)}`) throw new Error(`GitHub SHA256 metadata disagrees for ${asset.name}`);
   }
-  console.log(`GitHub ${tag}: ${assets.length} attachments ready; commit ${commit.sha}`);
-  syncTag(commit.sha);
+  console.log(`GitHub ${tag}: ${selectedAssets.length} attachments selected; commit ${commit.sha}`);
+  if (syncMode === "prepare") syncTag(commit.sha);
   const existingResponse = await request("gitee", `${giteePath}/releases/tags/${tag}`, {}, true);
   let mirror = existingResponse.status === 404 ? null : await existingResponse.json() as Release | null;
   if (existingResponse.status === 404) await existingResponse.body?.cancel();
   if (mirror === null) {
+    if (syncMode !== "prepare") throw new Error("Prepare the Gitee Release before synchronizing attachments");
     mirror = await json<Release>("gitee", `${giteePath}/releases`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tag_name: tag, target_commitish: commit.sha, name: release.name || tag,
@@ -173,10 +179,14 @@ async function main() {
     });
   }
   if (!mirror || !Number.isSafeInteger(mirror.id) || mirror.id <= 0 || mirror.tag_name !== tag) throw new Error("Invalid Gitee Release response");
+  if (syncMode === "prepare") {
+    console.log(JSON.stringify(assets.filter(asset => !asset.name.endsWith(".sha256")).sort((left, right) => left.size - right.size).map(asset => asset.name)));
+    return;
+  }
   const attachmentPath = `${giteePath}/releases/${mirror.id}/attach_files`;
   const existing = new Map((await attachments("gitee", attachmentPath)).map(asset => [asset.name, asset]));
   let uploaded = 0;
-  for (const asset of [...assets].sort((left, right) => left.size - right.size)) {
+  for (const asset of selectedAssets) {
     const expected = hashes.get(asset.name)!;
     let target = existing.get(asset.name);
     if (target && target.size !== asset.size) throw new Error(`Gitee attachment conflicts: ${asset.name}; existing file preserved`);
@@ -194,7 +204,7 @@ async function main() {
     if (sha256(mirrored) !== expected) throw new Error(`Gitee checksum mismatch: ${asset.name}; existing file preserved`);
     console.log(`Verified ${asset.name}: ${expected}`);
   }
-  console.log(`Synchronized ${tag}: uploaded ${uploaded}, verified ${assets.length}/${assets.length} attachments. https://gitee.com/${giteeRepository}/releases/tag/${tag}`);
+  console.log(`Synchronized ${tag}: uploaded ${uploaded}, verified ${selectedAssets.length}/${selectedAssets.length} selected attachments. https://gitee.com/${giteeRepository}/releases/tag/${tag}`);
 }
 
 main().catch(error => {
