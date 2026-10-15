@@ -94,6 +94,18 @@ function git(args: string[]): string {
   return result.stdout.trim();
 }
 
+function upload(path: string, asset: Attachment, bytes: Uint8Array): Attachment {
+  // curl provides transfer progress and aborts stalled uploads without retrying uncertain writes.
+  const result = spawnSync("curl", ["--fail", "--show-error", "--connect-timeout", "30", "--max-time", "900",
+    "--speed-limit", "1024", "--speed-time", "60", "--header", `Authorization: Bearer ${tokens.gitee}`,
+    "--form", `file=@-;filename=${asset.name};type=application/octet-stream`, `${bases.gitee}${path}`], {
+    input: bytes, encoding: "utf8", shell: false, timeout: 16 * 60 * 1000,
+    maxBuffer: 1024 * 1024, stdio: ["pipe", "pipe", "inherit"],
+  });
+  if (result.error || result.status !== 0) throw new Error(`Gitee upload failed for ${asset.name} (curl exit ${result.status}); rerun to reconcile completed attachments`);
+  return JSON.parse(result.stdout) as Attachment;
+}
+
 function syncTag(commit: string) {
   const ref = `refs/tags/${tag}`;
   if (git(["rev-parse", `${ref}^{commit}`]) !== commit) throw new Error("Local tag does not match the GitHub Release commit");
@@ -171,10 +183,8 @@ async function main() {
     if (!target) {
       const bytes = checksumBytes.get(asset.name) ?? await download("github", `${githubPath}/releases/assets/${asset.id}`, asset);
       if (sha256(bytes) !== expected) throw new Error(`GitHub checksum mismatch: ${asset.name}`);
-      const body = new FormData();
-      body.append("file", new Blob([bytes], { type: "application/octet-stream" }), asset.name);
       console.log(`Uploading Gitee: ${asset.name} (${asset.size} bytes)`);
-      target = await json<Attachment>("gitee", attachmentPath, { method: "POST", body });
+      target = upload(attachmentPath, asset, bytes);
       if (!Number.isSafeInteger(target.id) || target.id <= 0 || target.name !== asset.name || target.size !== asset.size) {
         throw new Error(`Unexpected Gitee upload response for ${asset.name}; rerun to reconcile the attachment list`);
       }
