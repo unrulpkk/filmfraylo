@@ -77,6 +77,7 @@ function sha256(bytes: Uint8Array): string {
 }
 
 async function download(provider: Provider, path: string, asset: Attachment): Promise<Uint8Array<ArrayBuffer>> {
+  console.log(`Downloading ${provider}: ${asset.name} (${asset.size} bytes)`);
   const response = await request(provider, path, { headers: { Accept: "application/octet-stream" } });
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.byteLength !== asset.size) throw new Error(`${provider}: incomplete download of ${asset.name}`);
@@ -163,7 +164,7 @@ async function main() {
   const attachmentPath = `${giteePath}/releases/${mirror.id}/attach_files`;
   const existing = new Map((await attachments("gitee", attachmentPath)).map(asset => [asset.name, asset]));
   let uploaded = 0;
-  for (const asset of assets) {
+  for (const asset of [...assets].sort((left, right) => left.size - right.size)) {
     const expected = hashes.get(asset.name)!;
     let target = existing.get(asset.name);
     if (target && target.size !== asset.size) throw new Error(`Gitee attachment conflicts: ${asset.name}; existing file preserved`);
@@ -172,6 +173,7 @@ async function main() {
       if (sha256(bytes) !== expected) throw new Error(`GitHub checksum mismatch: ${asset.name}`);
       const body = new FormData();
       body.append("file", new Blob([bytes], { type: "application/octet-stream" }), asset.name);
+      console.log(`Uploading Gitee: ${asset.name} (${asset.size} bytes)`);
       target = await json<Attachment>("gitee", attachmentPath, { method: "POST", body });
       if (!Number.isSafeInteger(target.id) || target.id <= 0 || target.name !== asset.name || target.size !== asset.size) {
         throw new Error(`Unexpected Gitee upload response for ${asset.name}; rerun to reconcile the attachment list`);
