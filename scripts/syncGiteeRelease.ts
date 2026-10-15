@@ -149,17 +149,17 @@ async function main() {
   console.log(`GitHub ${tag}: ${assets.length} attachments ready; commit ${commit.sha}`);
   syncTag(commit.sha);
   const existingResponse = await request("gitee", `${giteePath}/releases/tags/${tag}`, {}, true);
-  let mirror: Release;
-  if (existingResponse.status === 404) {
-    await existingResponse.body?.cancel();
+  let mirror = existingResponse.status === 404 ? null : await existingResponse.json() as Release | null;
+  if (existingResponse.status === 404) await existingResponse.body?.cancel();
+  if (mirror === null) {
     mirror = await json<Release>("gitee", `${giteePath}/releases`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tag_name: tag, target_commitish: commit.sha, name: release.name || tag,
         body: `${release.body ?? ""}\n\nSource: https://github.com/${githubRepository}/releases/tag/${tag}\nCommit: ${commit.sha}`,
         prerelease: release.prerelease }),
     });
-  } else mirror = await existingResponse.json() as Release;
-  if (!Number.isSafeInteger(mirror.id) || mirror.id <= 0 || mirror.tag_name !== tag) throw new Error("Invalid Gitee Release response");
+  }
+  if (!mirror || !Number.isSafeInteger(mirror.id) || mirror.id <= 0 || mirror.tag_name !== tag) throw new Error("Invalid Gitee Release response");
   const attachmentPath = `${giteePath}/releases/${mirror.id}/attach_files`;
   const existing = new Map((await attachments("gitee", attachmentPath)).map(asset => [asset.name, asset]));
   let uploaded = 0;
