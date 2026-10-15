@@ -43,6 +43,18 @@ git push origin v2.0.0
 
 构建只使用 GitHub 提供的 `GITHUB_TOKEN`，不需要保存个人访问令牌或模型密钥。仓库或组织需允许工作流创建 Release 及构建证明。公开仓库会生成 GitHub 构建来源证明；私有仓库跳过此步骤以避免计划限制。
 
+## 同步到 Gitee
+
+GitHub Release 发布并上传完所有平台附件后，自动调用独立工作流 `Sync FilmFraylo Release to Gitee`，同步到 [fengshaochen/filmfraylo](https://gitee.com/fengshaochen/filmfraylo)。仅推送 `main` 的构建不会触发发布或同步。
+
+仓库 Actions Secrets 需要配置 `GITEE_TOKEN`，令牌须有目标仓库的 `repo` 访问权限。GitHub 下载使用工作流自带的只读 Token。同步先推送该版本的 Git 标签及其对应提交，不修改 Gitee 分支，不强制覆盖已有标签，然后创建同版本 Release，保留正式版或预发布属性。
+
+附件直接复制 GitHub 发布的 ZIP、DMG、EXE 和 `.sha256` 原文件，不重新打包。上传后重新下载 Gitee 附件核对 SHA256；同名附件只有内容一致才跳过，内容不同则报错并保留原文件。执行结果在同步任务日志中逐项列出。
+
+补同步旧版本或恢复中断的上传：在 Actions 中打开 **Sync FilmFraylo Release to Gitee → Run workflow**，使用 `main` 分支，填写已存在的 GitHub Release 标签，例如 `v2.0.2`。脚本会核对已有附件，只上传缺失的部分。GitHub 发布成功而 Gitee 同步失败时，单独重跑同步工作流即可，无需重新构建安装包。
+
+同步要求 GitHub Release 已包含桌面版、Web 版三个平台的稳定文件名，以及两个 Skill 包和各自的校验文件；缺少附件时不会创建 Gitee Release。本功能只同步发布产物，Skill 的自动下载地址仍使用 GitHub。
+
 ## 核验下载包
 
 ```powershell
