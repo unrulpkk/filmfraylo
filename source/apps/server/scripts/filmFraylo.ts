@@ -124,14 +124,14 @@ async function install(runtime: string) {
     `# 本地运行入口\n\n使用命令数组执行（路径含空格时不要拼接 shell 字符串）：\n\n\`\`\`json\n${JSON.stringify([process.execPath, import.meta.path, "start", "--data", data, "--port", String(port), "--skills", skills], null, 2)}\n\`\`\`\n\n读取启动输出的 web 地址，在浏览器打开项目，再通过官方 MCP getAppState 确认目录。端口变化时重新 install 并更新原有 MCP 配置；不打印 runtime 文件中的 token。\n` });
   // 先完整检查冲突，再写入；保留用户改过的 Skill。
   for (const file of files) {
-    try { if (await readFile(file.path, "utf8") !== file.content) throw new Error(`已有不同内容，未覆盖：${file.path}；请选用 --skills 或备份后迁移。`); }
+    try { if ((await readFile(file.path, "utf8")).replace(/\r\n/g, "\n") !== file.content.replace(/\r\n/g, "\n")) throw new Error(`已有不同内容，未覆盖：${file.path}；请选用 --skills 或备份后迁移。`); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
   }
   for (const file of files) {
     await mkdir(dirname(file.path), { recursive: true });
     try { await writeFile(file.path, file.content, { flag: "wx" }); }
     catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || await readFile(file.path, "utf8") !== file.content) throw error;
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || (await readFile(file.path, "utf8")).replace(/\r\n/g, "\n") !== file.content.replace(/\r\n/g, "\n")) throw error;
     }
   }
   const result = spawnSync(process.execPath, [resolve(root, "build/mcp/install.js"), "--runtime", runtime,

@@ -1,56 +1,69 @@
-# FilmFraylo 本地 Web 发行版
+# FilmFraylo 使用指南
 
-目标链路：Codex → 自定义 Skill → 官方 Toonflow MCP（`--external`）→ 原生 Web 画布 → 工作区素材与预览。
+FilmFraylo 让 AI Harness 参与影视创作：你通过对话表达意图，助手协助构思方案、编写剧本、设计镜头并制作视听素材，画布用于组织、预览和调整成果。可以从创意开始，也可以接着已有剧本或素材继续制作。
 
-## 已有能力与复用边界
+## 准备开始
 
-| 能力 | 原生实现 | 本次处理 |
-| --- | --- | --- |
-| MCP HTTP/stdio、外部 Harness | packages/mcp，stdio `--external` | 原样复用，隐藏并拒绝 runAgent |
-| 官方 Skill、动态技能资源 | packages/mcp/skills/toonflow、packages/skills、server/utils/mcp/resources | 原样复用，补充一个 FilmFraylo Skill，内含五个阶段参考文档 |
-| 无限画布、节点、连线 | apps/web，packages/nodes，packages/tools/canvas | 原样复用 |
-| 图片/视频/配音与本地保存 | server/utils/media/generation | 原样复用，服务默认 assets/generated，原生节点保存到 assets/节点ID |
-| 文件和媒体预览、视频 Range | web/lib/workspaceFiles、server/routes/workspaces/files、utils/fileHttp | 原样复用 |
-| Web + Server 构建 | server/scripts/buildStandalone.ts、build.ts | 分发脚本调用原生构建 |
-| 内置 Agent | 原生运行时 | 保留；FilmFraylo 新配置 externalHarness=true 默认收起侧栏 |
+按 [安装说明](../../README.md#开始使用) 安装 FilmFraylo Skill，并让助手启动应用。说明想做什么、用于哪里，以及本次想做到哪一步；有目标时长、画幅、视觉风格或参考素材，也可以一起告诉助手。
 
-只新增启动安装入口、分发封装及专业工作流；独立 Server 增加可选 TOONFLOW_PORT / TOONFLOW_HOST，默认仍为原行为。FilmFraylo 启动器固定回环监听。未创建桌面客户端、替代 MCP、画布或文件系统。
+使用过程中保持 FilmFraylo 窗口或网页打开，并打开要制作的项目。以下示例使用 Codex 的调用方式，其他 AI 助手按各自的技能入口使用。
 
-## 一个 Skill，五个制作阶段
+## 从一个创意开始
 
-唯一自定义入口是 `$filmfraylo`。全书分析、角色档案、分集剧本、导演分镜和媒体生产放在该 Skill 的 references 中，由 Codex 按需读取，不作为独立 Skill 注册。官方 `toonflow` Skill 原样保留为 MCP 使用依赖。旧版 Skill 升级前，先把旧入口备份移出 Skills 发现目录，再运行 install；安装器仍拒绝覆盖不同内容。
+### 明确创意与视觉方向
 
-## 源码运行
-
-需要 Bun 1.3.14 或更新版本，先安装源码依赖并运行原生构建：
-
-```sh
-bun install --frozen-lockfile
-bun run build:server
-bun run start:filmFraylo
-bun run install:filmFraylo
-```
-
-源码新安装默认数据目录为应用根目录 `data/filmFraylo`，已有 `data/myToonflow/settings.json` 时继续沿用旧目录，Web 为 http://127.0.0.1:3000。启动脚本后台运行服务器，日志在数据目录 server.log；重复 start 复用目标实例。可传 `--port 3010 --data <绝对路径>`，后续安装时使用同一组参数。原生 MCP 自动处理独立端口冲突，安装器读取实际 runtime 路径。
-
-启动输出检测FilmFraylo Skill 是否安装。install 默认写入 `$CODEX_HOME/skills` 或 `~/.codex/skills`，输出无凭证的 Codex TOML；加 `--register` 才调用原生安装器注册 MCP，可用 `--codex` 指定 CLI。已有不同 Skill 拒绝覆盖，先备份迁移或使用 `--skills <目录>`；自选目录需由 Harness 加载。使用官方安装器生成的 `--external` 配置，保留 `tool_timeout_sec = 1800`。
-
-打开输出的 Web 地址，在原生主页打开/创建本地项目（独立 Server 沿用原生限制，位于所选数据目录的 workspaces 内）；首次聊天模型配置可选择“稍后配置”。重新连接 MCP 并开始 Codex 对话：
+先描述想表达的内容、情绪和观看体验，让助手帮你整理成可继续制作的方案。已有剧本或明确的镜头要求时，也可以直接从分镜开始。
 
 ```text
-$filmfraylo 分析当前工作区 source 里的小说，先交付全书分析和角色档案，不生成媒体。
+$filmfraylo 我想做一支约一分钟的科幻短片：一名快递员在雨夜收到来自未来的包裹。请先构思故事大纲和视觉风格。
 ```
 
-图片、视频和配音供应商仍在 Toonflow 设置中配置；无需配置聊天模型。Skill 中的本机启动命令由安装器生成，移动发行目录后应重新安装并更新 MCP 配置。Skill 不能动态添加当前 Codex 对话未加载的 MCP 工具。
+这一阶段重点确认主题、氛围和内容结构是否符合预期。
 
-已有数据目录保持原设置，不会自动覆写凭证；若 MCP 未启用会提示使用原生设置开启。停止服务时根据该数据目录 runtime 的 pid 停止对应进程；不要停止其他 Toonflow 实例。
+### 建立角色，编写剧本
 
-## 分发
+根据项目需要确定角色外观、性格、声音和场景设定，方便后续分镜与素材制作沿用。把创意展开成包含场景、动作、对白或旁白的剧本。
 
-```sh
-bun run package:filmFraylo
+```text
+$filmfraylo 沿用已确认的方向，设定快递员的外观和雨夜街道的环境，写成约一分钟的短片剧本，以动作叙事为主。
 ```
 
-产物位于 dist/filmFraylo时间戳.tar.gz，解压后需要本机 Bun，无需安装源码依赖。Windows 运行 start.cmd，macOS/Linux 运行 `sh start.sh`，或 `bun filmFraylo.js start`。运行 `bun filmFraylo.js install` 安装 FilmFraylo Skill 及官方依赖。首次启动才生成 data；分发包不复制源码 data、.env、API 密钥或个人项目。所有项目内容保存在所选数据目录的 workspaces 中。仅 Windows 完成本次运行测试，其他平台沿用原生启动路径但未实测。
+你可以直接反馈对白、节奏或人物表现，让助手修改具体段落。
 
-打包保留原版 MIT 许可，第三方库沿用原生构建依赖。Bun 是运行环境，不包含 EXE 桌面客户端。完整安装器、运行包与实际网页测试结果见同目录 filmFrayloValidation.md。
+### 把剧本变成可查看的分镜
+
+根据已确认的剧本安排镜头顺序、景别、运镜和声音，在画布中组织分镜，为素材制作准备清晰的依据。
+
+```text
+$filmfraylo 为已确认的短片剧本设计分镜，在画布中整理开场六个镜头，沿用现有角色和场景设定。
+```
+
+查看镜头之间的衔接，确认动作、空间关系和情绪推进是否符合预期，再开始生成素材。
+
+### 制作素材，边看边调整
+
+选定镜头后，可以让助手制作角色参考图、分镜图片、视频或配音。先做少量镜头，预览满意后再扩大制作范围，有助于减少重复生成。
+
+```text
+$filmfraylo 为短片开场的前三个镜头生成分镜图片，沿用已确认的角色外观和画面风格。
+```
+
+首次生成媒体前，在 FilmFraylo「设置 → 媒体模型 → safillu → 编辑模型」中填写 API Key 并保存。Key 直接在应用中填写即可；生成费用以服务方为准。创意方案、剧本和分镜文字可以先独立完成。
+
+## 修改与续作
+
+创作中可以随时指出要调整的部分，例如某一句对白、一个镜头的景别，或角色的服装。描述修改对象和希望达到的效果，便于助手保留已经满意的内容。
+
+```text
+$filmfraylo 把第三个镜头改成快递员的近景，突出犹豫的表情，沿用现有服装和场景。
+```
+
+再次打开项目时，可以让助手查看已有成果，接着完成下一项任务：
+
+```text
+$filmfraylo 继续当前项目，查看已确认的剧本和已有素材，接着完成短片剩余的分镜。
+```
+
+项目资料、画布和素材保存在本地。保留项目文件，方便之后继续制作或交给其他制作环节使用。
+
+[返回项目介绍](../../README.md)

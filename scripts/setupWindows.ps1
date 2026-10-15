@@ -4,12 +4,12 @@ param([string]$repository = '', [string]$codex = 'codex', [switch]$register, [sw
 $ErrorActionPreference = 'Stop'
 if ($register -and $harness -notin @('codex', 'workbuddy')) { throw '-register is only for Codex/WorkBuddy. Other harnesses receive configuration to merge; omit -register.' }
 # Bootstrap runs before the bundled runtime exists, using Windows built-in tools.
-if ($env:OS -ne 'Windows_NT') { throw 'Use setupMac.sh on macOS.' }
-$architecture = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
-if ($architecture -ne 'AMD64') { throw "Unsupported Windows architecture: $architecture. This release supports Windows x64." }
+if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Use setupMac.sh on macOS.' }
+$architecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+if ($architecture -ne [Runtime.InteropServices.Architecture]::X64) { throw "Unsupported Windows architecture: $architecture. This release supports Windows x64." }
 $asset = "filmFraylo-$mode-windows-x64.zip"
 if (!$repository) { $repository = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../references/releaseRepository.txt') -Raw).Trim() }
-$appParent = Join-Path $env:LOCALAPPDATA 'FilmFraylo'
+$appParent = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'FilmFraylo'
 # A stable user path remains visible when setup is launched from a packaged desktop harness.
 if ($harness -eq 'workbuddy') { $appParent = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.filmfraylo' }
 $appRoot = Join-Path $appParent 'app'

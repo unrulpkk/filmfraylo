@@ -47,7 +47,7 @@ async function main() {
   try { await writeFile(target, source, { flag: "wx" }); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    if (await readFile(target, "utf8") !== source) throw new Error(`Skill 已存在且内容不同，未覆盖：${target}。请备份后移走旧版本，或使用 --skills 指定其他目录`);
+    if ((await readFile(target, "utf8")).replace(/\r\n/g, "\n") !== source.replace(/\r\n/g, "\n")) throw new Error(`Skill 已存在且内容不同，未覆盖：${target}。请备份后移走旧版本，或使用 --skills 指定其他目录`);
   }
   console.log(`Skill 已安装：${target}`);
   if (values.register && !registered) {
