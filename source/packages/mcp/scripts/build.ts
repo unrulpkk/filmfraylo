@@ -26,6 +26,9 @@ await mkdir(skillOutput, { recursive: true });
 for (const entry of ["SKILL.md", "agents", "references", "scripts"]) {
   await cp(resolve(filmFrayloSkill, entry), resolve(skillOutput, entry), { recursive: true });
 }
+const updateBuild = await Bun.build({ entrypoints: [resolve(packageRoot, "../../apps/server/scripts/updateClient.ts")],
+  outdir: resolve(skillOutput, "scripts"), target: "bun", minify: true });
+if (!updateBuild.success) throw new AggregateError(updateBuild.logs, "Client updater build failed");
 const repository = process.env.GITHUB_REPOSITORY || (await readFile(resolve(filmFrayloSkill, "references/releaseRepository.txt"), "utf8")).trim();
 if (repository && !/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repository)) throw new Error("GitHub 仓库名称无效");
 await writeFile(resolve(output, "skills/filmfraylo/references/releaseRepository.txt"), `${repository}\n`);

@@ -1,4 +1,6 @@
 param([string]$repository = '', [string]$codex = 'codex', [switch]$register, [switch]$inspect,
+  [ValidateSet('', 'check', 'prepare', 'apply')][string]$update = '', [string]$version = '',
+  [string]$installation = '', [string]$dataDirectory = '', [switch]$restart,
   [ValidateSet('desktop', 'web')][string]$mode = 'desktop',
   [ValidateSet('codex', 'claude', 'cursor', 'opencode', 'gemini', 'workbuddy', 'generic')][string]$harness = 'codex')
 $ErrorActionPreference = 'Stop'
@@ -14,6 +16,35 @@ $appParent = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'F
 if ($harness -eq 'workbuddy') { $appParent = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.filmfraylo' }
 $appRoot = Join-Path $appParent 'app'
 if ($mode -eq 'desktop') { $appParent = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.filmfraylo'; $appRoot = Join-Path $appParent 'desktop' }
+if ($update) {
+  if ($mode -ne 'desktop' -or $inspect -or $register) { throw 'Update supports desktop only; do not combine with inspect or register.' }
+  if ($installation) { $appRoot = [IO.Path]::GetFullPath($installation) }
+  $updater = Join-Path $PSScriptRoot 'updateClient.js'
+  if (!(Test-Path -LiteralPath $updater)) { throw 'Install the complete latest Release Skill ZIP first; this Skill has no bundled client updater.' }
+  $runtime = Join-Path $appRoot 'app/bin/bun.exe'
+  if (!(Test-Path -LiteralPath $runtime)) { throw 'Installed desktop runtime not found. Check the installation path; no new installation was started.' }
+  # Run outside the program being replaced, so the updater itself does not lock the old executable.
+  $helperDirectory = Join-Path ([IO.Path]::GetTempPath()) ('filmFrayloUpdate' + [Guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $helperDirectory | Out-Null
+  $helper = Join-Path $helperDirectory 'bun.exe'
+  Copy-Item -LiteralPath $runtime -Destination $helper
+  $options = @($updater, '--action', $update, '--installation', $appRoot, '--repository', $repository, '--platform', 'windows-x64')
+  if ($version) { $options += @('--version', $version) }
+  if ($dataDirectory) { $options += @('--data', $dataDirectory) }
+  if ($restart) { $options += '--restart' }
+  $previousEncoding = [Console]::OutputEncoding
+  try {
+    [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+    & $helper @options
+    $updateExit = $LASTEXITCODE
+  } finally {
+    [Console]::OutputEncoding = $previousEncoding
+    Remove-Item -LiteralPath $helper
+    Remove-Item -LiteralPath $helperDirectory
+  }
+  exit $updateExit
+}
+if ($version -or $installation -or $dataDirectory -or $restart) { throw 'Update options require -update check, prepare or apply.' }
 $entryRelative = if ($mode -eq 'desktop') { 'app/bin/launcher.exe' } else { 'filmFraylo.js' }
 if ($inspect) {
   @{ harness = $harness; mode = $mode; platform = 'windows-x64'; asset = $asset; repository = $repository; installed = (Test-Path -LiteralPath (Join-Path $appRoot $entryRelative)) } | ConvertTo-Json

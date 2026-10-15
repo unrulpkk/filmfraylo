@@ -1,9 +1,11 @@
 ---
 name: filmfraylo
-description: 由 Codex、Claude Code、Cursor、OpenCode、Gemini CLI 或 WorkBuddy 等外部 Harness 在本地 FilmFraylo 执行小说转漫剧制作，连接 MCP 画布，完成全书分析、角色档案、剧本、分镜与媒体生产。仅用于 FilmFraylo 项目，不用于一般写作或源码开发。
+description: 由 Codex、Claude Code、Cursor、OpenCode、Gemini CLI 或 WorkBuddy 等外部 Harness 在 FilmFraylo 完成影视创作、剧本、分镜与媒体生产，并协助安装、检查和升级本地客户端。用于 FilmFraylo 项目及客户端维护，不用于一般写作或源码开发。
 ---
 
 # FilmFraylo 外部 Harness
+
+用户要求检查更新、升级客户端或更新 FilmFraylo 时，先读取 [客户端更新](references/clientUpdates.md)。客户端更新、Skill 更新和模型列表同步是不同操作；不要用重新运行首次安装替代升级，也不要为检查版本启动创作流程。
 
 当前外部 Harness 负责阅读、推理、创作与工具执行。连接前读取同批安装的官方 [Toonflow MCP Skill](../toonflow/SKILL.md)；首次缺少依赖时先按下节安装。保持官方工具、工作区文件和节点契约；不调用 `runAgent`，不替换运行时，不直接写画布 JSON。
 

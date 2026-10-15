@@ -4,6 +4,8 @@
 
 ## 安装与启动
 
+已有客户端的用户要升级时，读取 [客户端更新](clientUpdates.md)。先更新完整 Skill 包，再由 WorkBuddy 检查、准备下载，并在确认重启后安装；重复运行首次安装命令不会升级旧程序。
+
 用户可在 WorkBuddy「技能 → 添加技能 → 上传技能」导入 `filmFrayloWorkbuddy.zip`；这是单技能包，ZIP 根目录直接包含 SKILL.md。开发或本地安装也可将本 Skill 的 SKILL.md、agents、references、scripts 放在 `~/.workbuddy/skills/filmfraylo/`，不能只复制入口文档。同名 Skill 已存在时先比较版本，不覆盖用户定制内容。
 
 用户在 WorkBuddy 说“使用 FilmFraylo，把这本小说.txt 制作成漫剧”即可触发；无需输入 Codex 的 `$filmfraylo`。首次先按 [运行方式与来源说明](harnesses.md#首次选择运行方式) 推荐桌面版、提供网页版选项并说明实际发布情况。以下命令默认桌面版，网页版显式追加 `-mode web` / `--mode web`。按所在 Skill 的真实路径执行：

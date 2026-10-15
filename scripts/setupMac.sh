@@ -8,12 +8,22 @@ inspect=false
 codex=codex
 harness=codex
 mode=desktop
+update=
+version=
+installation=
+dataDirectory=
+restart=false
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --repository) repository=$2; shift 2 ;;
     --codex) codex=$2; shift 2 ;;
     --harness) harness=$2; shift 2 ;;
     --mode) mode=$2; shift 2 ;;
+    --update) update=$2; shift 2 ;;
+    --version) version=$2; shift 2 ;;
+    --installation) installation=$2; shift 2 ;;
+    --data-directory) dataDirectory=$2; shift 2 ;;
+    --restart) restart=true; shift ;;
     --register) register=true; shift ;;
     --inspect) inspect=true; shift ;;
     *) printf '%s\n' "Unknown option: $1" >&2; exit 1 ;;
@@ -33,6 +43,25 @@ appName=FilmFraylo.app
 if [ "$mode" = web ]; then appName=FilmFrayloWeb.app; fi
 app="$HOME/Applications/$appName"
 if [ -d "/Applications/$appName" ]; then app="/Applications/$appName"; fi
+if [ -n "$update" ]; then
+  case "$update" in check|prepare|apply) ;; *) echo 'Use --update check, prepare or apply.' >&2; exit 1 ;; esac
+  [ "$mode" = desktop ] && [ "$inspect" = false ] && [ "$register" = false ] || { echo 'Update supports desktop only; do not combine with inspect or register.' >&2; exit 1; }
+  if [ -n "$installation" ]; then app=$installation; fi
+  updater="$scriptRoot/updateClient.js"
+  [ -f "$updater" ] || { echo 'Install the complete latest Release Skill ZIP first; this Skill has no bundled client updater.' >&2; exit 1; }
+  runtime="$app/Contents/MacOS/bun"
+  [ -x "$runtime" ] || { echo 'Installed desktop runtime not found. Check the installation path.' >&2; exit 1; }
+  helperDirectory=$(mktemp -d "${TMPDIR:-/tmp}/filmFrayloUpdate.XXXXXX")
+  /bin/cp "$runtime" "$helperDirectory/bun"
+  trap 'rm -f "$helperDirectory/bun"; rmdir "$helperDirectory"' EXIT
+  set -- "$updater" --action "$update" --installation "$app" --repository "$repository" --platform "macos-$architecture"
+  if [ -n "$version" ]; then set -- "$@" --version "$version"; fi
+  if [ -n "$dataDirectory" ]; then set -- "$@" --data "$dataDirectory"; fi
+  if [ "$restart" = true ]; then set -- "$@" --restart; fi
+  "$helperDirectory/bun" "$@"
+  exit 0
+fi
+[ -z "$version$installation$dataDirectory" ] && [ "$restart" = false ] || { echo 'Update options require --update.' >&2; exit 1; }
 if [ "$inspect" = true ]; then printf 'platform=macos-%s\nasset=%s\nrepository=%s\napp=%s\nharness=%s\n' "$architecture" "$asset" "$repository" "$app" "$harness"; exit 0; fi
 if [ ! -d "$app" ]; then
   printf '%s' "$repository" | /usr/bin/grep -Eq '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$' || { echo 'Use --repository owner/repo or install the Skill ZIP from a GitHub Release.' >&2; exit 1; }
