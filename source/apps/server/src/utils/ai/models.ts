@@ -1,5 +1,6 @@
 import { t } from "@/lib/i18n";
 import { z } from "zod";
+import safillu from "@toonflow/providers/language/safillu";
 
 const modelSchema = z.object({
   id: z.string().optional(), name: z.string().optional(),
@@ -33,6 +34,7 @@ export async function fetchProviderModels({ apiUrl, protocol, apiKey }: { apiUrl
     for (const item of items) {
       const id = item.id?.trim();
       if (!id) throw new Error("模型列表包含无效的模型 ID");
+      if (url.origin === new URL(safillu.apiUrl).origin && !safillu.models.some(model => model.id === id)) continue;
       models.set(id, { id, label: item.display_name || item.displayName || id, contextWindow: item.inputTokenLimit, maxOutputTokens: item.outputTokenLimit });
     }
     const cursor = protocol === "anthropic-messages" && result.has_more ? result.last_id : undefined;

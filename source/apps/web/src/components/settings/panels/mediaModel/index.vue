@@ -20,7 +20,7 @@
             <el-text size="small" type="info">{{ item.models.length }} 个模型</el-text>
           </div>
           <el-space class="itemActions" wrap>
-            <el-button v-if="item.modelsUrl" text :icon="IconDownload" :loading="fetchingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError || !item.revision" @click="fetchModels(item)">获取模型</el-button>
+            <el-button v-if="item.modelsUrl" text :icon="IconDownload" :loading="fetchingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError || !item.revision" @click="fetchModels(item)">同步线上模型</el-button>
             <el-button text :icon="IconEdit" :disabled="!!fetchingFile || !!deletingFile || !!item.loadError" @click="editProvider(item)">编辑模型</el-button>
             <el-popconfirm title="确定删除此供应商及其模型？" confirmButtonText="删除" cancelButtonText="取消" @confirm="deleteProvider(item)">
               <template #reference><el-button text type="danger" :icon="IconTrash" :loading="deletingFile === item.fileName" :disabled="!!fetchingFile || !!deletingFile || !item.revision">删除</el-button></template>
@@ -105,7 +105,8 @@ async function fetchModels(provider: MediaProvider) {
     if (data.code !== 200 || !data.data) throw new Error(data.message || "获取模型失败");
     saveProviderItem(data.data);
     invalidateNodeModels("media");
-    ElMessage.success("模型列表已更新");
+    if (data.data.modelSyncWarnings?.length) ElMessage.warning(`已同步 ${data.data.models.length} 个媒体模型。${data.data.modelSyncWarnings.join("；")}`);
+    else ElMessage.success(`已同步 ${data.data.models.length} 个媒体模型，下拉框已更新`);
   } catch (error) {
     ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : error instanceof Error ? error.message : "获取模型失败，请重试");
   } finally { fetchingFile.value = ""; }

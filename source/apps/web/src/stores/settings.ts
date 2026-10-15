@@ -114,7 +114,7 @@ export function saveSettings(update?: (current: Record<string, unknown>) => Reco
   const saving = saveQueue.then(async () => {
     const patch = update?.(settings.value);
     if (update && !patch) return false;
-    const { data } = await axios.put<{ code: number; data: { customProviders?: CustomProvider[]; mediaProvider?: { id: string }; modelRefreshErrors?: string[] } | null }>(
+    const { data } = await axios.put<{ code: number; data: { customProviders?: CustomProvider[]; mediaProvider?: { id: string }; modelRefreshErrors?: string[]; modelRefreshWarnings?: string[] } | null }>(
       "/api/settings/save", { settings: { ...settings.value, ...patch } }, { headers: { "x-toonflow-workspace": "1" } },
     );
     if (data.code !== 200) throw new Error("保存设置失败");
@@ -129,7 +129,8 @@ export function saveSettings(update?: (current: Record<string, unknown>) => Reco
       invalidateNodeModels("media");
       window.dispatchEvent(new CustomEvent("toonflow:plugin-installed", { detail: { type: "provider", name: data.data.mediaProvider.id } }));
     }
-    if (data.data?.modelRefreshErrors?.length) ElMessage.warning(`API Key 已保存，部分模型获取失败：${data.data.modelRefreshErrors.join("；")}`);
+    if (data.data?.modelRefreshErrors?.length) ElMessage.warning(`设置已保存，部分模型获取失败：${data.data.modelRefreshErrors.join("；")}`);
+    if (data.data?.modelRefreshWarnings?.length) ElMessage.warning(data.data.modelRefreshWarnings.join("；"));
     return true;
   });
   saveQueue = saving.then(() => {}, () => {});

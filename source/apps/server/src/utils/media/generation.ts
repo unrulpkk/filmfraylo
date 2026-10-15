@@ -154,11 +154,11 @@ export async function generateMedia(
   const assets = mediaType === "audio"
     ? await provider.generateAudio!({
       model: request.modelId, text: request.prompt, images, audios: await references(request.audios, "audio"),
-      prompt: request.voicePrompt, other: request.duration === undefined ? undefined : { duration: request.duration },
+      prompt: request.voicePrompt, other: { duration: request.duration, seed: request.seed },
       voice: request.voice, speed: request.speed, volume: request.volume, pitch: request.pitch, language: request.language, format: request.format, sampleRate: request.sampleRate,
     })
     : mediaType === "image"
-    ? await provider.generateImage!({ model: request.modelId, prompt: request.prompt, images, ratio: request.ratio, size: request.size })
+    ? await provider.generateImage!({ model: request.modelId, prompt: request.prompt, images, ratio: request.ratio, size: request.size, n: request.n, other: { seed: request.seed, negativePrompt: request.negativePrompt } })
     : await provider.generateVideo!({
       model: request.modelId, prompt: request.prompt, images,
       videos: await references(request.videos, "video"), audios: await references(request.audios, "audio"),
@@ -166,6 +166,7 @@ export async function generateMedia(
       lastFrame: request.lastFrame ? await readReference(directory, request.lastFrame, "image", signal) : undefined,
       ratio: request.ratio, resolution: request.resolution, duration: request.duration,
       generateAudio: request.generateAudio, mode: request.mode,
+      other: { seed: request.seed },
     });
   if (!Array.isArray(assets) || !assets.length) invalid("供应商未返回生成结果");
   const written: string[] = [];

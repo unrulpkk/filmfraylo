@@ -79,6 +79,11 @@ interface FfmpegRequiredError extends Error {
 
 interface ProviderTools {
   fetch: typeof globalThis.fetch;
+  /** 持久化已提交的媒体任务回执，不包含密钥或参考素材；旧宿主可缺省。 */
+  recordTask?(task: {
+    taskId: string; model: string; baseUrl: string; queryPath: string;
+    queryMethod: "GET" | "POST"; status: "pending" | "success" | "failed";
+  }): Promise<void>;
   /** 提取供应商错误正文中的可读原因，并隐藏配置中的密钥和 URL 查询参数。 */
   errorMessage(value: unknown): string;
   hash: typeof Bun.hash;

@@ -94,6 +94,9 @@ export interface MediaGenerationRequest {
   providerId: string;
   modelId: string;
   prompt: string;
+  seed?: number;
+  negativePrompt?: string;
+  n?: number;
   outputDirectory?: string;
   images?: MediaReference[];
   videos?: MediaReference[];

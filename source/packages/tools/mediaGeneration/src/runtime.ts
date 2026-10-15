@@ -13,6 +13,7 @@ const sharedFields = {
   providerId: z.string().regex(/^[a-z][a-zA-Z0-9]{0,95}$/),
   modelId: z.string().trim().min(1).max(256),
   prompt: z.string().trim().min(1).max(100000),
+  seed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   outputDirectory: relativePath.optional(),
   images: z.array(imageReference).max(64).optional(),
   ratio: z.string().regex(/^[1-9]\d{0,3}:[1-9]\d{0,3}$/).optional(),
@@ -24,9 +25,12 @@ export const listMediaModelsSchema = z.strictObject({});
 export const imageGenerationSchema = z.strictObject({
   ...sharedFields,
   size: z.string().trim().min(1).max(64).optional(),
+  negativePrompt: z.string().max(12000).optional(),
+  n: z.number().int().min(1).max(4).optional(),
 });
 export const videoGenerationSchema = z.strictObject({
   ...sharedFields,
+  ratio: sharedFields.ratio.or(z.literal("adaptive")),
   videos: z.array(videoReference).max(64).optional(),
   audios: z.array(audioReference).max(64).optional(),
   firstFrame: imageReference.optional(),
@@ -43,6 +47,7 @@ export const audioGenerationSchema = z.strictObject({
   providerId: sharedFields.providerId,
   modelId: sharedFields.modelId,
   prompt: sharedFields.prompt,
+  seed: sharedFields.seed,
   outputDirectory: sharedFields.outputDirectory,
   images: sharedFields.images,
   audios: z.array(audioReference).max(64).optional(),
