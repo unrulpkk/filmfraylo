@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { readFile } from "@toonflow/file";
+import { readFile, unlink } from "@toonflow/file";
 import type { Request, Response, NextFunction } from "express";
 import buildRoute from "@/core";
 import { errorFromCause } from "@/lib/responseFormat";
@@ -45,6 +45,10 @@ export async function createApp({
     ?? detectLocale([Intl.DateTimeFormat().resolvedOptions().locale]));
   if (dataDirectory && toolsRoot)
     await initializePlugins(resolve(dataDirectory, "tools"), toolsRoot, /^[a-z][a-zA-Z0-9]*\.tool\.js$/, pluginRevision);
+  // 移除旧版本安装的已下架工具，保留工作区中的历史制作文件。
+  if (dataDirectory) await unlink(resolve(dataDirectory, "tools/novelDirector.tool.js")).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== "ENOENT") throw error;
+  });
   if (dataDirectory && nodesRoot) await initializePlugins(resolve(dataDirectory, "nodes"), nodesRoot, /^[a-z][a-zA-Z0-9]*\.umd\.js$/, pluginRevision);
   if (dataDirectory && extRoot) {
     const { default: initializeExt } = await import("@/utils/plugins/initializeExt");

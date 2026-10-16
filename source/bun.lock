@@ -711,16 +711,6 @@
         "@toonflow/tools-scaffold": "workspace:*",
       },
     },
-    "packages/tools/novelDirector": {
-      "name": "@toonflow/tool-novel-director",
-      "version": "1.0.0",
-      "dependencies": {
-        "zod": "^4.6.2",
-      },
-      "devDependencies": {
-        "@toonflow/tools-scaffold": "workspace:*",
-      },
-    },
     "packages/tools/skillOperator": {
       "name": "@toonflow/tool-skill-operator",
       "version": "2.0.0",
@@ -1385,8 +1375,6 @@
     "@toonflow/tool-ffmpeg": ["@toonflow/tool-ffmpeg@workspace:packages/tools/ffmpeg"],
 
     "@toonflow/tool-media-generation": ["@toonflow/tool-media-generation@workspace:packages/tools/mediaGeneration"],
-
-    "@toonflow/tool-novel-director": ["@toonflow/tool-novel-director@workspace:packages/tools/novelDirector"],
 
     "@toonflow/tool-skill-operator": ["@toonflow/tool-skill-operator@workspace:packages/tools/skillOperator"],
 
