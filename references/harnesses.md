@@ -21,7 +21,7 @@ macOS 将提示中的 Windows EXE 换为对应架构的 App / DMG。用户已明
 
 安装脚本默认 `desktop`，下载 `filmFraylo-desktop-<平台>.zip/dmg`，启动原有 Electrobun 桌面窗口。选择网页版传 `-mode web` / `--mode web`，下载 `filmFraylo-web-<平台>.zip/dmg`，直接使用随包 Bun 启动服务。Windows Web 包不再包含 EXE 浏览器启动器。新版工作流需发布新标签后才会提供这些附件；若 Release 缺少所选包，明确报告未发布，不用旧版启动器替代。
 
-Windows 桌面安装在 `~/.filmfraylo/desktop`，入口为 `app/bin/launcher.exe`；macOS 安装到 `~/Applications/FilmFraylo.app`，已有系统 Applications 安装则复用。桌面默认数据在 `~/.filmfraylo/desktopData`，已有安装目录旁 data/settings.json 时保持原目录。启动输出含 `mode: desktop`、实际 MCP 目录和 runtime 路径，不需要浏览器页面。Windows 需要系统 WebView2；缺少时引导安装微软官方运行环境，不换用浏览器冒充桌面。
+Windows 桌面安装在 `~/.filmfraylo/desktop`，新版便携包双击最外层 `filmFraylo.exe` 启动，保留旁边的 `app` 和 `data` 文件夹；旧包入口仍为 `app/bin/launcher.exe`。macOS 安装到 `~/Applications/FilmFraylo.app`，已有系统 Applications 安装则复用。新版 Windows 便携包使用自身 `data` 目录；旧版和 macOS 默认使用 `~/.filmfraylo/desktopData`，已有安装目录旁 data/settings.json 时保持原目录。启动输出含 `mode: desktop`、实际 MCP 目录和 runtime 路径，不需要浏览器页面。Windows 需要系统 WebView2；缺少时引导安装微软官方运行环境，不换用浏览器冒充桌面。
 
 桌面和 Web 数据目录独立；切换方式先停止旧服务，再由用户选择原工作区，不自动迁移或并发写入同一项目。脚本不会覆盖已有不同的 MCP 配置；用户已明确选择切换时，Harness 备份并仅更新 filmfraylo 条目，不改其他服务和权限。已有桌面实例会复用，不另开 Web 服务。
 

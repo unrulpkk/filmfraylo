@@ -79,7 +79,7 @@ async function start() {
     // Windows 的 data 与 app 同级；macOS 的 data 与 .app 同级，避免随程序更新被替换。
     const installDirectory = resolve(PATHS.RESOURCES_FOLDER, process.platform === "darwin" ? "../../.." : "../..");
     const legacyData = resolve(installDirectory, "data");
-    const dataDirectory = process.env.TOONFLOW_DATA_DIR ?? (existsSync(resolve(legacyData, "settings.json"))
+    const dataDirectory = process.env.TOONFLOW_DATA_DIR ?? (existsSync(resolve(installDirectory, "filmFraylo.exe")) || existsSync(resolve(legacyData, "settings.json"))
       ? legacyData : resolve(homedir(), ".filmfraylo/desktopData"));
     mkdirSync(dataDirectory, { recursive: true });
     try {

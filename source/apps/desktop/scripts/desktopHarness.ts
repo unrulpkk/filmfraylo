@@ -10,7 +10,7 @@ const resources = resolve(import.meta.dirname, "..");
 const mac = process.platform === "darwin";
 const install = resolve(resources, mac ? "../../.." : "../..");
 const legacyData = resolve(install, "data");
-const data = resolve(values.data ?? (existsSync(resolve(legacyData, "settings.json"))
+const data = resolve(values.data ?? (existsSync(resolve(install, "filmFraylo.exe")) || existsSync(resolve(legacyData, "settings.json"))
   ? legacyData : resolve(homedir(), ".filmfraylo/desktopData")));
 const mcpDirectory = resolve(resources, "app/mcp");
 

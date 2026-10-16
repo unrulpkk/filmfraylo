@@ -22,7 +22,7 @@ sh "<本Skill目录>/scripts/setupMac.sh" --harness workbuddy
 
 脚本会识别系统、从 GitHub Releases 下载对应成品并校验 SHA256、打开原生桌面窗口（web 模式才打开浏览器）、补齐官方 Toonflow MCP Skill，然后自动合并用户级 `~/.workbuddy/mcp.json` 中的 `mcpServers.filmfraylo`。无需另装 Bun、Node 或 Codex，也无需让用户手动复制 JSON。
 
-Windows 桌面版使用 `~/.filmfraylo/desktop` 与 `~/.filmfraylo/desktopData`；Web 模式继续使用 `~/.filmfraylo/app` 与 `~/.filmfraylo/data`，避免 AppData 重定向。macOS 桌面版也默认使用 `~/.filmfraylo/desktopData`。已有其他位置的创作数据时按本机启动入口继续使用，不自动迁移或另起空项目。
+Windows 桌面版使用 `~/.filmfraylo/desktop`；新版便携包双击根目录的 `filmFraylo.exe` 启动，配置使用旁边的 `data` 文件夹。旧版和 macOS 桌面版默认使用 `~/.filmfraylo/desktopData`。Web 模式继续使用 `~/.filmfraylo/app` 与 `~/.filmfraylo/data`，避免 AppData 重定向。已有其他位置的创作数据时按本机启动入口继续使用，不自动迁移或另起空项目。
 
 此处是自定义 MCP 文件，不是 `settings.json`，也不是 `connectors/<账号>/mcp.json`；不要修改账号连接器文件、凭据、审批或沙箱设置。已有配置保留，修改前生成备份；相同配置重复运行不改文件，同名配置不同或已停用则报告冲突，不能强制替换。
 

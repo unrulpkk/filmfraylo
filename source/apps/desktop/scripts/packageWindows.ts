@@ -1,9 +1,8 @@
 import { $ } from "bun";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, renameSync, rmSync } from "@toonflow/file";
 import { file, write } from "@toonflow/file/bun";
-import { createHash } from "node:crypto";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import desktopConfig from "../../../electrobun.config";
 
 if (process.platform !== "win32" || process.arch !== "x64") {
@@ -77,12 +76,6 @@ try {
     desktopConfig.app.version
   } /DappIdentifier=${desktopConfig.app.identifier} /DappTar=${tarFile} /DappHash=${manifest.hash} /DoutputFile=${outputFile} /DinitializeInstallScript=${initializeInstallScript} ${join(installerDir, "installer.nsi")}`;
   console.log(`NSIS 安装包：${outputFile}`);
-  const releaseFile = resolve("dist", basename(outputFile));
-  mkdirSync(dirname(releaseFile), { recursive: true });
-  copyFileSync(outputFile, releaseFile);
-  const checksum = createHash("sha256").update(new Uint8Array(await file(releaseFile).arrayBuffer())).digest("hex");
-  await write(`${releaseFile}.sha256`, `${checksum}  ${basename(releaseFile)}\n`);
-  console.log(`Release 安装包：${releaseFile}`);
 } finally {
   if (dirname(realpathSync(stagingDir)) !== realpathSync(nsisDir)) throw new Error("拒绝清理暂存目录以外的路径。");
   rmSync(stagingDir, { recursive: true });
