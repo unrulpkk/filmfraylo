@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { readFile, unlink } from "@toonflow/file";
+import { readFile, unlink, writeAtomic } from "@toonflow/file";
 import type { Request, Response, NextFunction } from "express";
 import buildRoute from "@/core";
 import { errorFromCause } from "@/lib/responseFormat";
@@ -73,6 +73,16 @@ export async function createApp({
   }
   // ACT: 技能和团队只补首次安装，保留用户修改。
   if (dataDirectory && skillsRoot) await initializePlugins(resolve(dataDirectory, "skills"), skillsRoot);
+  // 只迁移内置技能的产品名称，保留作者署名和用户编辑的其他内容。
+  if (dataDirectory) for (const path of ["canvas/SKILL.md", "workflow/SKILL.md", "workflow/references/assets.md", "workflow/references/canvasExecution.md"]) {
+    const target = resolve(dataDirectory, "skills", path);
+    const content = await readFile(target, "utf8").catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+      return "";
+    });
+    const updated = content.replace(/^(?!\s*author:).*\bToonflow\b.*$/gm, line => line.replaceAll("Toonflow", "FilmFraylo"));
+    if (updated !== content) await writeAtomic(target, updated);
+  }
   if (dataDirectory && agentsRoot) await initializePlugins(resolve(dataDirectory, "agents"), agentsRoot);
   const app = express();
   app.locals.appVersion = appVersion;

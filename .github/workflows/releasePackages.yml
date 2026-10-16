@@ -50,6 +50,16 @@ jobs:
           $version = $env:GITHUB_REF_NAME -replace '^v', ''
           if ($version -notmatch '^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$') { throw 'Use a tag such as v2.0.0 or v2.0.0-preview.1' }
           "appVersion=$version" >> $env:GITHUB_ENV
+      - name: Prepare Windows installer compiler
+        if: runner.os == 'Windows'
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'nsis.zip'
+          curl.exe --fail --location --retry 3 --connect-timeout 20 --max-time 180 --output $archive 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.11/nsis-3.11.zip'
+          if ($LASTEXITCODE -ne 0) { throw 'NSIS download failed' }
+          if ((Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'c7d27f780ddb6cffb4730138cd1591e841f4b7edb155856901cdf5f214394fa1') { throw 'NSIS checksum mismatch' }
+          $compiler = Join-Path $env:RUNNER_TEMP 'nsisCompiler'
+          Expand-Archive -LiteralPath $archive -DestinationPath $compiler
+          "NSIS_PATH=$(Join-Path $compiler 'nsis-3.11/makensis.exe')" >> $env:GITHUB_ENV
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
       - name: Prepare Mac desktop dependencies
@@ -59,6 +69,9 @@ jobs:
           bun packages/startup/scripts/buildMac.ts
       - name: Build desktop package
         run: bun run package:desktopRelease
+      - name: Build Windows EXE installer
+        if: runner.os == 'Windows'
+        run: bun apps/desktop/scripts/packageWindows.ts
       - name: Build optional Web package
         run: bun run package:${{ matrix.package }}
       - name: Build first-use Skills bundle
@@ -84,6 +97,7 @@ jobs:
           subject-path: |
             source/dist/*.zip
             source/dist/*.dmg
+            source/dist/*.exe
       - name: Upload downloadable artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
@@ -91,6 +105,7 @@ jobs:
           path: |
             source/dist/*.zip
             source/dist/*.dmg
+            source/dist/*.exe
             source/dist/*.sha256
           if-no-files-found: error
           compression-level: 0
