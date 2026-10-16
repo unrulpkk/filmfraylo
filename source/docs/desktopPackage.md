@@ -4,7 +4,7 @@
 
 Windows 使用系统 WebView2；若系统缺少它，需要安装微软官方 WebView2 Runtime。运行包内含 Bun 和桌面运行组件，用户无需安装开发工具。macOS 使用系统 WebKit。
 
-全新安装数据默认在 `~/.filmfraylo/desktopData`；已有安装目录旁的 data/settings.json 时继续使用原目录。设置和作品不保存在可替换的应用资源中。无 Key 可创建项目和画布，生成媒体前再在设置中填写 safillu API Key。关闭应用会停止本实例的服务。
+全新安装数据默认在 `~/.filmfraylo/desktopData`；已有安装目录旁的 data/settings.json 时继续使用原目录。设置和作品不保存在可替换的应用资源中。首次使用须配置 API Key 和语言模型，已保存的配置无需重复填写。内置输入框保留，可独立创作或通过外部 Harness 操作画布。关闭应用会停止本实例的服务。
 
 使用 FilmFraylo Skill，选择桌面版，指定当前 Harness；Skill 读取公开的运行状态并连接原生 MCP，不将 token 写入宿主配置。首次连接可能需要宿主信任或重新加载工具。已有不同配置时保留原配置并说明冲突，不会自动迁移项目。
 

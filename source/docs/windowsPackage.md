@@ -2,7 +2,7 @@
 
 此包是可选本地网页版，原生桌面版见 desktopPackage.md。需要 Windows 10/11 x64。完整解压到普通目录，双击 **start.cmd**：启动本地服务后自动打开浏览器。运行包自带 Bun，不需要安装 Node.js、Bun、Nginx 或下载源码，不再套 EXE 启动器。
 
-首次无 safillu Key 时选择“稍后配置”。Codex 可通过 MCP 创建画布、编写文本、配置节点；实际调用模型生成媒体才需要 Key。设置里的“媒体模型”提供 safillu 的 API Key 配置。
+首次启动在客户端填写 Safillu API Key，或通过“添加私有提供商”配置 API Key 和语言模型，再进入项目首页。已保存的配置无需重复填写。首页保留内置输入框，可独立创作；Codex 也可通过 MCP 操作画布。媒体服务可在“设置 → 媒体模型”中配置。
 
 默认网址为 http://127.0.0.1:3000，默认数据目录为 `%LOCALAPPDATA%\FilmFraylo\data`。若旧版 `%LOCALAPPDATA%\safillu\data` 已有 settings.json，自动沿用旧目录；也可用 `--data` 明确指定。项目、素材和设置保存在数据目录，关闭网页不会停止本地服务。双击 `stop.cmd` 停止服务；停止后再更换程序文件。备份或迁移时请保留整个数据目录。
 

@@ -9,7 +9,6 @@ const router = createRouter({
     },
     {
       path: "/hello",
-      beforeEnter: async () => await useHelloStore().load() ? { path: "/home", replace: true } : true,
       component: () => import("@/pages/hello/index.vue"),
     },
     {
@@ -25,5 +24,10 @@ const router = createRouter({
       component: () => import("@/pages/workspace/index.vue"),
     },
   ],
+});
+router.beforeEach(async to => {
+  const completed = await useHelloStore().load();
+  if (!completed && to.path !== "/hello") return { path: "/hello", replace: true };
+  if (completed && to.path === "/hello") return { path: "/home", replace: true };
 });
 export default router;

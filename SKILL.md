@@ -31,13 +31,13 @@ WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，�
 
 单独安装 Skill 也可使用同一 Release 的 `filmFrayloSkills.zip`，包含官方 MCP Skill 依赖。仓库地址为空时，使用用户提供或已验证的 GitHub 地址，以 `-repository owner/repo` / `--repository owner/repo` 传入；不能猜测下载源。不会覆盖已有应用或已修改的 Skill；安装冲突时保留现有内容，核对 Skill 与运行包版本。
 
-网页版安装后打开本地 Web，重新连接 MCP 再创作；桌面版在应用窗口中操作画布。遇到系统安全提示时说明实际情况，不自动关闭系统防护或清除隔离属性；SHA256 不能替代代码签名或保证软件无风险。无模型 Key 可以进入画布，实际生成前再配置 safillu。
+网页版安装后打开本地 Web，重新连接 MCP 再创作；桌面版在应用窗口中操作画布。遇到系统安全提示时说明实际情况，不自动关闭系统防护或清除隔离属性；SHA256 不能替代代码签名或保证软件无风险。首次使用须在客户端配置 API Key 和语言模型；已保存配置的用户无需重复填写。
 
 ## API Key 与充值引导
 
 官网及充值入口统一使用 https://api.safillu.com。需要获取 Key 或充值时提供可点击链接；未核实具体页面路径时只使用该首页，不猜测登录、令牌或支付页面地址。
 
-- 首次启动直接进入项目首页，不要求填写 Key、完成欢迎页或充值。当前 Harness 先通过 MCP 创建或打开本地项目、创建画布和文件、分析小说、编写剧本和分镜、配置节点；这些步骤使用 Harness 自身的推理能力，不依赖 FilmFraylo 的文本或媒体模型 Key。
+- 首次启动引导用户在客户端填写 Safillu API Key，或通过「添加私有提供商」配置带 Key 的语言模型，再进入项目首页。不要跳过引导或代填虚构 Key。内置输入框始终保留，用户可以独立使用 FilmFraylo；通过本 Skill 创作时，由当前 Harness 规划并操作 MCP 画布。
 - 首次准备调用图片、视频或配音模型时，若未配置 Key，引导用户在官网获取 API Key，再到本地 FilmFraylo「设置 → 媒体模型 → safillu → 编辑模型」填写 API Key 并保存。默认服务地址为 `https://api.safillu.com`。未配置时保留已有文件和画布，继续可独立完成的文字工作，不阻塞整个创作流程。
 - Key 由用户直接填入本地网页，不要求粘贴到聊天里，不回显 Key，也不把它写入剧本、画布文本、日志或 productionState.md。检查状态时优先使用不返回密钥的模型或配置状态接口。
 - 只有供应商明确返回余额或额度不足时才引导到官网充值；认证失败先检查 Key 和权限，网络错误、限流或模型不可用按真实错误处理，不一律要求充值。不编造余额、套餐、价格或预计费用。
@@ -51,7 +51,7 @@ WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，�
 
 1. 先调用官方 MCP `getAppState`。工具缺失或服务离线时，若已存在安装器生成的 [本机启动入口](references/localRuntime.md)，执行其中命令数组；没有则执行上面的成品安装流程。仅当用户明确选择源码开发环境时，在应用根目录执行 `bun run install:filmFraylo`。
 2. 启动脚本检查目标目录和端口，只启动缺失服务。输出包含网页地址、runtime 路径和Skill 安装状态；不读取或输出 runtime 中的 token。Skill 不会让本轮尚未注册的 MCP 工具自动出现，首次配置后需要重新连接 MCP。
-3. 网页版用浏览器打开脚本返回的 Web 地址；桌面版使用应用窗口，不额外打开浏览器。启动后直接进入项目首页，无需先填写 Key。调用 `getAppState` 定位连接；新项目先通过宿主文件能力创建用户指定的本地目录，再使用官方 `openProject` 打开该目录。使用 `addCanvas` 和工作区文件工具准备画布与文件，再刷新实际 connectionId、directory、canvasId；不借用其他实例，不直接写画布 JSON。
+3. 网页版用浏览器打开脚本返回的 Web 地址；桌面版使用应用窗口，不额外打开浏览器。首次使用由用户在客户端完成 Key 配置，已配置则直接进入项目首页。调用 `getAppState` 定位连接；新项目先通过宿主文件能力创建用户指定的本地目录，再使用官方 `openProject` 打开该目录。使用 `addCanvas` 和工作区文件工具准备画布与文件，再刷新实际 connectionId、directory、canvasId；不借用其他实例，不直接写画布 JSON。
 4. 宿主支持时，通过 resources/list/read 发现当前 Toonflow 的 workflow 及需要的资料，尊重用户已修改版本；缺少 resources 能力时按 Harness 接入说明处理。内置工作流的提问映射到当前宿主对话，创作和调用均由当前 Harness 完成。
 
 ## 选择当前阶段

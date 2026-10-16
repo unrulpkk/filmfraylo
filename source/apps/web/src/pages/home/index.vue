@@ -15,7 +15,7 @@
           <el-image class="brandLogo" :src="logoUrl" fit="contain" alt="FilmFraylo" />
           <h1>FilmFraylo</h1>
         </div>
-        <div v-if="appSettings.externalHarness !== true" class="promptArea">
+        <div class="promptArea">
           <span class="arrowHint inspirationHint">
             灵感创作模式
             <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
@@ -98,7 +98,6 @@ import type { AgentAttachment } from "@/components/agent/types";
 import logoUrl from "@toonflow/assets/filmFrayloLogo.png";
 import { useWorkspaceStore, type Project } from "@/stores/workspace";
 import { hasDesktopUpdate } from "@/stores/desktopUpdate";
-import { settings as appSettings } from "@/stores/settings";
 import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib/mobile";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import settings from "@/components/settings/index.vue";

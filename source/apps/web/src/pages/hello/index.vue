@@ -21,7 +21,7 @@
           v-else-if="view === 'custom'"
           type="primary"
           :loading="saving"
-          :disabled="!customProviders.some((provider) => provider.models.length)"
+          :disabled="!hello.configured"
           @click="completeSetup">
           开始使用
         </el-button>
@@ -38,8 +38,6 @@
             <icon-key class="buttonIcon" />
             添加私有提供商
           </el-button>
-          <span class="separator">或</span>
-          <el-button class="secondaryButton" round :loading="saving" @click="completeSetup">稍后配置</el-button>
         </div>
       </div>
 
@@ -69,7 +67,7 @@ import tfRouterSource from "@toonflow/providers/media/tfRouter?raw";
 import safillu from "@toonflow/providers/language/safillu";
 import safilluSource from "@toonflow/providers/media/safillu?raw";
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
-import { customProviders, saveSettings } from "@/stores/settings";
+import { saveSettings } from "@/stores/settings";
 import type { MediaProvider } from "@/components/settings/panels/mediaModel/types";
 import { useHelloStore } from "@/stores/hello";
 import anonymousData from "@/lib/anonymousData";
@@ -138,10 +136,10 @@ async function completeSetup() {
   saving.value = true;
   try {
     await hello.complete();
-    anonymousData.track(view.value === "custom" ? "onboarding.complete" : "onboarding.skip");
+    anonymousData.track("onboarding.complete");
     await router.replace("/home");
-  } catch {
-    ElMessage.error("保存引导状态失败，请重试");
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : "保存引导状态失败，请重试");
   } finally {
     saving.value = false;
   }
@@ -360,11 +358,6 @@ onBeforeUnmount(() => {
         justify-content: center;
         gap: 10px;
         margin-top: 20px;
-
-        .separator {
-          color: var(--el-text-color-secondary);
-          font-size: 13px;
-        }
 
         .secondaryButton {
           height: auto;

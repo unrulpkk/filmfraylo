@@ -84,7 +84,7 @@ async function start() {
     mkdirSync(dataDirectory, { recursive: true });
     try {
       writeFileSync(resolve(dataDirectory, "settings.json"), JSON.stringify({ settings: {
-        externalHarness: true, ui: { startupAnimation: false },
+        ui: { startupAnimation: false },
         mcp: { enabled: true, token: randomBytes(32).toString("hex"), port: 10588 },
       } }), { flag: "wx", mode: 0o600 });
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
