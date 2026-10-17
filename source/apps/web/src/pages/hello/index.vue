@@ -10,28 +10,23 @@
         <div class="providerBody">
           <languageModel />
         </div>
-        <el-button
-          v-if="view === 'custom'"
-          type="primary"
-          :loading="saving"
-          :disabled="!hello.configured"
-          @click="completeSetup">
-          开始使用
-        </el-button>
+        <el-button v-if="view === 'custom'" type="primary" :loading="saving" :disabled="!hello.configured" @click="completeSetup">开始使用</el-button>
       </div>
       <div v-else class="welcomeContent">
         <h1 id="welcomeTitle">快速开始</h1>
-        <p class="description">使用 Safillu NewAPI，一次配置 DeepSeek、生图、H3 视频、音色设计与 BGM。</p>
-        <el-input v-model="newApiKey" type="password" showPassword autocomplete="off" placeholder="输入 Safillu NewAPI Key" aria-label="Safillu NewAPI Key" :disabled="saving" />
-        <el-button class="loginButton" type="primary" :loading="saving" :disabled="!newApiKey.trim()" @click="configureNewApi">配置 NewAPI 并开始使用</el-button>
-
-        <el-button class="mobileConnectButton" :type="deviceHubEnabled ? 'success' : undefined" :plain="deviceHubEnabled" :icon="deviceHubEnabled || mobileConnection.mode === 'remote' ? IconDeviceDesktop : IconQrcode" @click="mobileConnectVisible = true">{{ mobileConnectionLabel }}</el-button>
-        <div class="secondaryActions">
-          <el-button class="secondaryButton" round @click="view = 'custom'">
-            <icon-key class="buttonIcon" />
-            添加私有提供商
-          </el-button>
-        </div>
+        <p class="description">使用 Safillu AI聚合平台，快速、安全地调用主流 AI 模型。</p>
+        <el-input
+          v-model="newApiKey"
+          type="password"
+          showPassword
+          autocomplete="off"
+          placeholder="输入 Safillu 渠道 Key"
+          aria-label="Safillu 渠道 Key"
+          :disabled="saving"
+          class="keyInput" />
+        <el-button class="loginButton" type="primary" :loading="saving" :disabled="!newApiKey.trim()" @click="configureNewApi">
+          配置 key 并开始使用
+        </el-button>
       </div>
 
       <footer class="pageFooter">
@@ -83,16 +78,16 @@ async function configureNewApi() {
     const apiKey = newApiKey.value.trim();
     const response = await axios.get<{ code: number; data: MediaProvider[] }>("/api/providers/media/list");
     if (response.data.code !== 200) throw new Error("读取媒体供应商失败");
-    if (!response.data.data.some(provider => provider.id === safillu.id)) {
+    if (!response.data.data.some((provider) => provider.id === safillu.id)) {
       const added = await axios.post("/api/providers/media/add", { source: safilluSource });
       if (added.data.code !== 200) throw new Error(added.data.message || "添加 NewAPI 失败");
     }
-    await saveSettings(current => {
+    await saveSettings((current) => {
       const providers = (current.customProviders ?? []) as { id: string }[];
       const configs = (current.mediaProviderConfigs ?? {}) as Record<string, Record<string, unknown>>;
       const { id, label, version, apiUrl, protocol, models } = safillu;
       return {
-        customProviders: [{ id, label, version, apiUrl, protocol, models, apiKey }, ...providers.filter(provider => provider.id !== id)],
+        customProviders: [{ id, label, version, apiUrl, protocol, models, apiKey }, ...providers.filter((provider) => provider.id !== id)],
         mediaProviderConfigs: { ...configs, [id]: { ...configs[id], apiKey, baseUrl: "https://api.safillu.com" } },
       };
     });
@@ -103,7 +98,9 @@ async function configureNewApi() {
     await router.replace("/home");
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "配置 NewAPI 失败");
-  } finally { saving.value = false; }
+  } finally {
+    saving.value = false;
+  }
 }
 
 async function completeSetup() {
@@ -199,6 +196,11 @@ async function completeSetup() {
         margin-inline-end: 8px;
       }
 
+      .keyInput {
+        min-height: 50px;
+        margin: 0 0 16px;
+      }
+
       .loginButton {
         width: 100%;
         height: auto;
@@ -228,7 +230,11 @@ async function completeSetup() {
         }
       }
 
-      .mobileConnectButton { width: 100%; margin: 12px 0 0; min-height: 42px; }
+      .mobileConnectButton {
+        width: 100%;
+        margin: 12px 0 0;
+        min-height: 42px;
+      }
     }
 
     .pageFooter {
