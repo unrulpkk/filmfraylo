@@ -3,7 +3,7 @@
     <div class="providerPicker">
       <aside class="providerSidebar" aria-label="选择厂商">
         <button
-          v-for="item in languageProviders"
+          v-for="item in pickerProviders"
           :key="item.id"
           class="providerItem"
           type="button"
@@ -62,7 +62,8 @@ import { saveSettings, type CustomProviderModel } from "@/stores/settings";
 import { isTfRouterProvider } from "@/lib/tf";
 
 const visible = defineModel<boolean>({ default: false });
-const selectedProvider = ref<string>(languageProviders[0]?.id ?? "");
+const pickerProviders = languageProviders.filter(provider => provider.id !== "tfRouter");
+const selectedProvider = ref<string>(pickerProviders[0]?.id ?? "");
 const formApi = shallowRef<Api>();
 const formValues = ref<Record<string, unknown>>({});
 const models = shallowRef<CustomProviderModel[]>([]);
@@ -79,7 +80,7 @@ watch(selectedProvider, () => {
   formError.value = "";
   formValues.value = {};
 }, { flush: "sync" });
-const activeProvider = computed(() => languageProviders.find(provider => provider.id === selectedProvider.value));
+const activeProvider = computed(() => pickerProviders.find(provider => provider.id === selectedProvider.value));
 const providerReadme = computed(() => {
   const provider = activeProvider.value;
   return provider && "readme" in provider && typeof provider.readme === "string" ? provider.readme : "";
@@ -131,7 +132,7 @@ watch(
 );
 
 function resetForm() {
-  selectedProvider.value = languageProviders[0]?.id ?? "";
+  selectedProvider.value = pickerProviders[0]?.id ?? "";
   formError.value = "";
   formApi.value = undefined;
   formValues.value = {};
