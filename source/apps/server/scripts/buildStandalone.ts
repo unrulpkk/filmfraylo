@@ -15,7 +15,7 @@ for (const group of ["nodes", "tools", "ext"]) {
       .env({ ...process.env, NODE_ENV: "production" });
   }
 }
-await $`${process.execPath} ${resolve(import.meta.dirname, "bundledTools.ts")}`.cwd(projectDir);
+await $`${process.execPath} ${resolve(import.meta.dirname, "bundledPlugins.ts")}`.cwd(projectDir);
 
 await $`${process.execPath} run build`.cwd(resolve(projectDir, "apps/web"));
 await $`${process.execPath} run build`.cwd(resolve(projectDir, "apps/server"));
