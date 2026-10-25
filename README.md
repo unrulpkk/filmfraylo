@@ -77,6 +77,6 @@ $filmfraylo 请启动画布，我想做一支雨夜城市主题的科幻短片�
 
 ## 更多资料
 
-[使用指南](source/docs/filmFraylo.md) · [Windows 安装说明](source/docs/windowsPackage.md) · [macOS 安装说明](source/docs/macPackage.md) · [开发文档](source/docs/development.md)
+[使用指南](source/docs/filmFraylo.md) · [Windows 安装说明](source/docs/windowsPackage.md) · [macOS 安装说明](source/docs/macPackage.md) · [开发文档](source/docs/development.md) · [跟进 Toonflow 更新](source/docs/upstreamSync.md)
 
 FilmFraylo 基于 Toonflow 开源项目定制，遵循 [MIT 许可](LICENSE)。
