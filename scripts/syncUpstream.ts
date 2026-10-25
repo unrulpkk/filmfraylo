@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import upstream from "./upstream.json" with { type: "json" };
 
@@ -137,8 +137,8 @@ function sync() {
   const incoming = commit(mappedTree(head, target), [base, target], `Toonflow source ${target}`);
   const anchor = commit(output(["rev-parse", `${head}^{tree}`]), [head, base], `Record Toonflow merge base ${upstream.baseCommit}`);
   const branch = `update/toonflow-${target.slice(0, 12)}`;
-  const common = output(["rev-parse", "--git-common-dir"]);
-  const directory = resolve(isAbsolute(common) ? common : resolve(root, common), "upstreamWorktrees", target.slice(0, 12));
+  // Windows 依赖路径较深；工作树放在仓库旁，避免再叠加 .git/upstreamWorktrees。
+  const directory = resolve(dirname(root), `${basename(root)}Update${target.slice(0, 8)}`);
   output(["worktree", "add", "-b", branch, directory, anchor]);
   output(["config", "--local", `branch.${branch}.filmFrayloUpstream`, JSON.stringify({ base: upstream.baseCommit, target, incoming, anchor })]);
   console.log(`\n同步分支：${branch}\n独立工作树：${directory}`);
