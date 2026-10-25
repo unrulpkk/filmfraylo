@@ -5,42 +5,28 @@
       <div v-if="view !== 'welcome'" class="providerContent">
         <header class="providerHeader">
           <el-button text :icon="IconArrowLeft" :disabled="saving" @click="view = 'welcome'">返回</el-button>
-          <h1 id="welcomeTitle">{{ view === "login" ? "登录 TF-Router" : "配置语言模型" }}</h1>
+          <h1 id="welcomeTitle">配置语言模型</h1>
         </header>
-        <div v-if="view === 'login'" v-loading="saving" class="loginBody" element-loading-text="正在配置文本模型和媒体模型…">
-          <iframe ref="loginFrame" class="loginFrame" :src="loginUrl" title="TF-Router 登录与注册" />
-        </div>
-        <div v-else class="providerBody">
+        <div class="providerBody">
           <languageModel />
         </div>
-        <div v-if="view === 'login' && loginError" class="loginFeedback" role="status">
-          <el-alert :title="loginError" type="error" :closable="false" showIcon />
-          <el-button v-if="loginKey" type="primary" :loading="saving" @click="configureProviders">重试配置</el-button>
-        </div>
-        <el-button
-          v-else-if="view === 'custom'"
-          type="primary"
-          :loading="saving"
-          :disabled="!customProviders.some((provider) => provider.models.length)"
-          @click="completeSetup">
-          开始使用
-        </el-button>
+        <el-button v-if="view === 'custom'" type="primary" :loading="saving" :disabled="!hello.configured" @click="completeSetup">开始使用</el-button>
       </div>
       <div v-else class="welcomeContent">
         <h1 id="welcomeTitle">快速开始</h1>
-        <p class="description">使用 Safillu NewAPI，一次配置 DeepSeek、生图、H3 视频、音色设计与 BGM。</p>
-        <el-input v-model="newApiKey" type="password" showPassword autocomplete="off" placeholder="输入 Safillu NewAPI Key" aria-label="Safillu NewAPI Key" :disabled="saving" />
-        <el-button class="loginButton" type="primary" :loading="saving" :disabled="!newApiKey.trim()" @click="configureNewApi">配置 NewAPI 并开始使用</el-button>
-
-        <el-button class="mobileConnectButton" :type="deviceHubEnabled ? 'success' : undefined" :plain="deviceHubEnabled" :icon="deviceHubEnabled || mobileConnection.mode === 'remote' ? IconDeviceDesktop : IconQrcode" @click="mobileConnectVisible = true">{{ mobileConnectionLabel }}</el-button>
-        <div class="secondaryActions">
-          <el-button class="secondaryButton" round @click="view = 'custom'">
-            <icon-key class="buttonIcon" />
-            添加私有提供商
-          </el-button>
-          <span class="separator">或</span>
-          <el-button class="secondaryButton" round :loading="saving" @click="completeSetup">稍后配置</el-button>
-        </div>
+        <p class="description">使用 Safillu AI聚合平台，快速、安全地调用主流 AI 模型。</p>
+        <el-input
+          v-model="newApiKey"
+          type="password"
+          showPassword
+          autocomplete="off"
+          placeholder="输入 Safillu 渠道 Key"
+          aria-label="Safillu 渠道 Key"
+          :disabled="saving"
+          class="keyInput" />
+        <el-button class="loginButton" type="primary" :loading="saving" :disabled="!newApiKey.trim()" @click="configureNewApi">
+          配置 key 并开始使用
+        </el-button>
       </div>
 
       <footer class="pageFooter">
@@ -60,16 +46,14 @@
 
 <script setup lang="ts">
 import axios from "axios";
-import { defineAsyncComponent, onMounted, onBeforeUnmount, ref } from "vue";
+import { defineAsyncComponent, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { IconArrowLeft, IconQrcode, IconDeviceDesktop } from "@tabler/icons-vue";
-import tfRouter from "@toonflow/providers/language/tfRouter";
-import tfRouterSource from "@toonflow/providers/media/tfRouter?raw";
 import safillu from "@toonflow/providers/language/safillu";
 import safilluSource from "@toonflow/providers/media/safillu?raw";
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
-import { customProviders, saveSettings } from "@/stores/settings";
+import { saveSettings } from "@/stores/settings";
 import type { MediaProvider } from "@/components/settings/panels/mediaModel/types";
 import { useHelloStore } from "@/stores/hello";
 import anonymousData from "@/lib/anonymousData";
@@ -81,17 +65,11 @@ import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib
 const languageModel = defineAsyncComponent(() => import("@/components/settings/panels/languageModel/index.vue"));
 const mobileConnect = defineAsyncComponent(() => import("@/components/mobileConnect.vue"));
 const mobileConnectVisible = ref(false);
-const view = ref<"welcome" | "login" | "custom">("welcome");
-const loginUrl = ref("https://api.toonflow.net/login?type=toonflow");
-const loginOrigin = new URL(loginUrl.value).origin;
-const loginFrame = ref<HTMLIFrameElement>();
-const loginKey = ref("");
-const loginError = ref("");
+const view = ref<"welcome" | "custom">("welcome");
 const saving = ref(false);
 const newApiKey = ref("");
 const router = useRouter();
 const hello = useHelloStore();
-let loginRequest: AbortController | undefined;
 
 async function configureNewApi() {
   if (saving.value || !newApiKey.value.trim()) return;
@@ -100,16 +78,16 @@ async function configureNewApi() {
     const apiKey = newApiKey.value.trim();
     const response = await axios.get<{ code: number; data: MediaProvider[] }>("/api/providers/media/list");
     if (response.data.code !== 200) throw new Error("读取媒体供应商失败");
-    if (!response.data.data.some(provider => provider.id === safillu.id)) {
+    if (!response.data.data.some((provider) => provider.id === safillu.id)) {
       const added = await axios.post("/api/providers/media/add", { source: safilluSource });
       if (added.data.code !== 200) throw new Error(added.data.message || "添加 NewAPI 失败");
     }
-    await saveSettings(current => {
+    await saveSettings((current) => {
       const providers = (current.customProviders ?? []) as { id: string }[];
       const configs = (current.mediaProviderConfigs ?? {}) as Record<string, Record<string, unknown>>;
       const { id, label, version, apiUrl, protocol, models } = safillu;
       return {
-        customProviders: [{ id, label, version, apiUrl, protocol, models, apiKey }, ...providers.filter(provider => provider.id !== id)],
+        customProviders: [{ id, label, version, apiUrl, protocol, models, apiKey }, ...providers.filter((provider) => provider.id !== id)],
         mediaProviderConfigs: { ...configs, [id]: { ...configs[id], apiKey, baseUrl: "https://api.safillu.com" } },
       };
     });
@@ -120,17 +98,9 @@ async function configureNewApi() {
     await router.replace("/home");
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : "配置 NewAPI 失败");
-  } finally { saving.value = false; }
-}
-
-function openLogin() {
-  const url = new URL(loginUrl.value);
-  const pageStyle = getComputedStyle(document.documentElement);
-  url.searchParams.set("bgcolor", "white");
-  url.searchParams.set("txtcolor", pageStyle.getPropertyValue("--el-color-primary").trim());
-  loginUrl.value = url.href;
-  loginKey.value = loginError.value = "";
-  view.value = "login";
+  } finally {
+    saving.value = false;
+  }
 }
 
 async function completeSetup() {
@@ -138,107 +108,14 @@ async function completeSetup() {
   saving.value = true;
   try {
     await hello.complete();
-    anonymousData.track(view.value === "custom" ? "onboarding.complete" : "onboarding.skip");
-    await router.replace("/home");
-  } catch {
-    ElMessage.error("保存引导状态失败，请重试");
-  } finally {
-    saving.value = false;
-  }
-}
-
-function receiveLogin(event: MessageEvent) {
-  if (view.value !== "login" || saving.value || event.origin !== loginOrigin || event.source !== loginFrame.value?.contentWindow) return;
-  const data = event.data;
-  if (!data || typeof data !== "object" || !["register", "login"].includes(data.type)) return;
-  if (data.msg === "failed") {
-    loginKey.value = "";
-    loginError.value = typeof data.error === "string" && data.error.trim() ? data.error : data.type === "register" ? "注册失败" : "登录失败";
-    return;
-  }
-  if (data.msg !== "success") return;
-  loginError.value = "";
-  if (data.type === "register") {
-    ElMessage.success("注册成功，请继续登录以自动配置模型");
-    return;
-  }
-  if (typeof data.key !== "string" || !data.key.trim() || data.key.length > 8192) {
-    loginKey.value = "";
-    loginError.value = "登录未返回有效的 API Key，请重新登录";
-    return;
-  }
-  loginKey.value = data.key.trim();
-  void configureProviders();
-}
-
-async function configureProviders() {
-  if (saving.value || !loginKey.value) return;
-  saving.value = true;
-  loginError.value = "";
-  const apiKey = loginKey.value;
-  const request = new AbortController();
-  loginRequest = request;
-  try {
-    const mediaResponse = await axios.get<{ code: number; data: MediaProvider[] }>("/api/providers/media/list", { signal: request.signal });
-    if (mediaResponse.data.code !== 200 || !Array.isArray(mediaResponse.data.data)) throw new Error("读取媒体供应商失败，请重试配置");
-    request.signal.throwIfAborted();
-    if (!mediaResponse.data.data.some((provider) => provider.id === tfRouter.id)) {
-      await axios.post("/api/providers/media/add", { source: tfRouterSource }, { signal: request.signal });
-    }
-    request.signal.throwIfAborted();
-    // ACT: 媒体文件已安装但保存失败时保留文件，重试通过列表复用，不覆盖用户编辑的模型。
-    await saveSettings(settings => {
-      request.signal.throwIfAborted();
-      const providers = settings.customProviders ?? [];
-      if (!Array.isArray(providers)) throw new Error("语言模型配置格式无效");
-      const configs = settings.mediaProviderConfigs as Record<string, Record<string, unknown>> | undefined;
-      if (configs !== undefined && (!configs || typeof configs !== "object" || Array.isArray(configs))) throw new Error("媒体供应商配置格式无效");
-      const current = configs?.[tfRouter.id];
-      if (current !== undefined && (!current || typeof current !== "object" || Array.isArray(current))) throw new Error("当前供应商配置格式无效");
-      const index = providers.findIndex(provider => typeof provider?.id === "string" && provider.id.toLowerCase() === tfRouter.id.toLowerCase());
-      const previous = providers[index];
-      const provider = {
-        ...previous,
-        id: previous?.id ?? tfRouter.id,
-        label: previous?.label ?? tfRouter.label,
-        icon: previous?.icon ?? tfRouter.icon,
-        apiUrl: tfRouter.apiUrl,
-        protocol: tfRouter.protocol,
-        apiKey,
-        models: previous?.models ?? [],
-      };
-      return {
-        customProviders: index < 0 ? [...providers, provider] : providers.map((item, position) => position === index ? provider : item),
-        mediaProviderConfigs: { ...configs, [tfRouter.id]: { ...current, apiKey } },
-      };
-    });
-    invalidateNodeModels("media");
-    if (request.signal.aborted) return;
-    await hello.complete();
     anonymousData.track("onboarding.complete");
-    loginKey.value = "";
-    ElMessage.success("TF-Router API Key 已配置完成");
     await router.replace("/home");
   } catch (error) {
-    if (!request.signal.aborted)
-      loginError.value = axios.isAxiosError(error)
-        ? error.response?.data?.message || "自动配置失败，请重试"
-        : error instanceof Error
-        ? error.message
-        : "自动配置失败，请重试";
+    ElMessage.error(error instanceof Error ? error.message : "保存引导状态失败，请重试");
   } finally {
     saving.value = false;
   }
 }
-
-onMounted(() => {
-  window.addEventListener("message", receiveLogin);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener("message", receiveLogin);
-  loginRequest?.abort();
-  loginKey.value = "";
-});
 </script>
 
 <style lang="scss" scoped>
@@ -290,29 +167,6 @@ onBeforeUnmount(() => {
         overscroll-behavior: contain;
         padding: 2px;
       }
-
-      .loginBody {
-        min-height: 0;
-        overflow-y: hidden;
-        overscroll-behavior: contain;
-        background-color: #fff;
-        border-radius: var(--ui-radius);
-        width: 500px;
-
-        .loginFrame {
-          display: block;
-          width: 100%;
-          height: 100%;
-          min-height: 640px;
-          border: 0;
-          background: transparent;
-        }
-      }
-
-      .loginFeedback {
-        display: grid;
-        gap: 12px;
-      }
     }
 
     .welcomeContent {
@@ -342,6 +196,11 @@ onBeforeUnmount(() => {
         margin-inline-end: 8px;
       }
 
+      .keyInput {
+        min-height: 50px;
+        margin: 0 0 16px;
+      }
+
       .loginButton {
         width: 100%;
         height: auto;
@@ -361,11 +220,6 @@ onBeforeUnmount(() => {
         gap: 10px;
         margin-top: 20px;
 
-        .separator {
-          color: var(--el-text-color-secondary);
-          font-size: 13px;
-        }
-
         .secondaryButton {
           height: auto;
           min-height: 36px;
@@ -376,7 +230,11 @@ onBeforeUnmount(() => {
         }
       }
 
-      .mobileConnectButton { width: 100%; margin: 12px 0 0; min-height: 42px; }
+      .mobileConnectButton {
+        width: 100%;
+        margin: 12px 0 0;
+        min-height: 42px;
+      }
     }
 
     .pageFooter {

@@ -3,22 +3,18 @@ import { defineStore } from "pinia";
 import { customProviders, saveSettings, settings } from "@/stores/settings";
 
 export const useHelloStore = defineStore("hello", () => {
-  const completed = computed(() => settings.value.helloCompleted === true);
+  const configured = computed(() => customProviders.value.some(provider =>
+    typeof provider.apiKey === "string" && !!provider.apiKey.trim() && provider.models.length > 0));
+  const completed = computed(() => settings.value.helloCompleted === true && configured.value);
 
   async function load() {
     if (typeof settings.value.helloCompleted === "boolean") return completed.value;
-    let previouslyCompleted = false;
-    try {
-      previouslyCompleted = JSON.parse(localStorage.getItem("toonflow.hello") ?? "null")?.completed === true;
-    } catch {
-      // ACT: 旧缓存不可读时仍可从已配置的模型恢复；桌面随机端口之间无法迁移 localStorage。
-    }
-    if (previouslyCompleted || customProviders.value.some(provider => typeof provider.apiKey === "string" && provider.apiKey.trim() && provider.models.length))
-      await complete();
+    if (configured.value) await complete();
     return completed.value;
   }
 
   async function complete() {
+    if (!configured.value) throw new Error("请先配置 API Key 和语言模型");
     await saveSettings(() => ({ helloCompleted: true }));
   }
 
@@ -26,5 +22,5 @@ export const useHelloStore = defineStore("hello", () => {
     await saveSettings(() => ({ helloCompleted: false }));
   }
 
-  return { completed, load, complete, reset };
+  return { configured, completed, load, complete, reset };
 });

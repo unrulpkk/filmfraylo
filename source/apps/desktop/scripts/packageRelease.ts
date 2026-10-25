@@ -29,6 +29,12 @@ await writeFile(resolve(resources, "buildInfo.json"), JSON.stringify({ product: 
   repository: process.env.GITHUB_REPOSITORY ?? null, runId: process.env.GITHUB_RUN_ID ?? null }, null, 2));
 await cp(resolve(root, "LICENSE"), resolve(resources, "license.txt"));
 await cp(resolve(root, "docs/desktopPackage.md"), resolve(stage, "readme.md"));
+if (!mac) {
+  await mkdir(resolve(stage, "data"));
+  // ACT: 沿用 Windows 自带编译器生成轻量入口，实际应用仍由 SDK launcher 启动。
+  const csc = resolve(process.env.WINDIR!, "Microsoft.NET/Framework64/v4.0.30319/csc.exe");
+  await $`${csc} /nologo /target:winexe /platform:x64 /optimize+ /reference:System.Windows.Forms.dll /win32icon:${resolve(root, "packages/assets/logo.ico")} /out:${resolve(stage, "filmFraylo.exe")} ${resolve(root, "apps/desktop/native/portableLauncher.cs")}`;
+}
 const archive = resolve(root, "dist", `${name}.${mac ? "dmg" : "zip"}`);
 if (mac) await $`hdiutil create -volname FilmFraylo -srcfolder ${stage} -ov -format UDZO ${archive}`;
 else await $`tar -a -cf ${archive} -C ${resolve(root, "dist")} ${name}`;

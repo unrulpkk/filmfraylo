@@ -11,7 +11,7 @@ FilmFraylo 共用一个 SKILL.md 和官方 stdio MCP，不为不同宿主维护�
 | 桌面版（推荐） | 独立应用窗口，画布和本地服务一起启动；Windows 使用 EXE，macOS 使用 App / DMG | 需有对应系统的真正桌面制品；未签名版本可能遇到系统安全提示 |
 | 本地网页版 | 本地服务运行，浏览器中使用画布 | 同样需要下载本地运行包；关闭网页不会停止服务，按运行包说明停止 |
 
-两个方式启动后都直接进入项目首页，不要求填写模型 Key 或完成欢迎页。六种 Harness 均通过原生 MCP 创建画布、节点和本地文件，分析小说与编写剧本使用当前 Harness 的推理能力；到实际图片、视频或配音生成时再配置 safillu Key。项目与素材保存在本地。网页方式仍会执行本地程序，不能宣称它无需信任下载内容或能绕过系统限制。
+两种方式首次启动均需在客户端配置 API Key 和语言模型，已保存配置则直接进入项目首页。内置输入框保留，可独立使用；六种 Harness 也可通过原生 MCP 创建画布、节点和本地文件，使用自身的推理能力完成创作。媒体生成使用已配置的供应商 Key。项目与素材保存在本地。网页方式仍会执行本地程序，不能宣称它无需信任下载内容或能绕过系统限制。
 
 首次提示示例（仅在两种成品都已发布时使用）：
 
@@ -21,7 +21,7 @@ macOS 将提示中的 Windows EXE 换为对应架构的 App / DMG。用户已明
 
 安装脚本默认 `desktop`，下载 `filmFraylo-desktop-<平台>.zip/dmg`，启动原有 Electrobun 桌面窗口。选择网页版传 `-mode web` / `--mode web`，下载 `filmFraylo-web-<平台>.zip/dmg`，直接使用随包 Bun 启动服务。Windows Web 包不再包含 EXE 浏览器启动器。新版工作流需发布新标签后才会提供这些附件；若 Release 缺少所选包，明确报告未发布，不用旧版启动器替代。
 
-Windows 桌面安装在 `~/.filmfraylo/desktop`，入口为 `app/bin/launcher.exe`；macOS 安装到 `~/Applications/FilmFraylo.app`，已有系统 Applications 安装则复用。桌面默认数据在 `~/.filmfraylo/desktopData`，已有安装目录旁 data/settings.json 时保持原目录。启动输出含 `mode: desktop`、实际 MCP 目录和 runtime 路径，不需要浏览器页面。Windows 需要系统 WebView2；缺少时引导安装微软官方运行环境，不换用浏览器冒充桌面。
+Windows 桌面安装在 `~/.filmfraylo/desktop`，新版便携包双击最外层 `filmFraylo.exe` 启动，保留旁边的 `app` 和 `data` 文件夹；旧包入口仍为 `app/bin/launcher.exe`。macOS 安装到 `~/Applications/FilmFraylo.app`，已有系统 Applications 安装则复用。新版 Windows 便携包使用自身 `data` 目录；旧版和 macOS 默认使用 `~/.filmfraylo/desktopData`，已有安装目录旁 data/settings.json 时保持原目录。启动输出含 `mode: desktop`、实际 MCP 目录和 runtime 路径，不需要浏览器页面。Windows 需要系统 WebView2；缺少时引导安装微软官方运行环境，不换用浏览器冒充桌面。
 
 桌面和 Web 数据目录独立；切换方式先停止旧服务，再由用户选择原工作区，不自动迁移或并发写入同一项目。脚本不会覆盖已有不同的 MCP 配置；用户已明确选择切换时，Harness 备份并仅更新 filmfraylo 条目，不改其他服务和权限。已有桌面实例会复用，不另开 Web 服务。
 
@@ -87,7 +87,7 @@ sh "<Skill目录>/scripts/setupMac.sh" --harness cursor
 2. 在当前项目或用户选定的作用域合并 **filmfraylo 这一项**，保留其他服务、权限、注释和设置。已有相同配置无需改动；不同配置先核对是否指向用户当前使用的实例，不能悄悄覆盖。对 JSONC 使用支持注释的编辑方式，不用 JSON.parse 后整文件重写。
 3. `registered: true` 表示 Codex 已通过 CLI 注册，或其他受支持宿主已将配置合并到 `configPath`，不要重复添加。Codex 可在原表补充输出中的 `tool_timeout_sec`。generic 或 print-only 仅生成配置，需要当前 Harness 完成合并；注册成功仍不代表已经连接。
 4. 让宿主重新加载 MCP；需要重启会话或宿主原生信任确认时，明确告知。工具出现后调用官方 `getAppState`，核对实际工作区与画布；未出现时只报告“配置已准备，等待连接”，不能假装已创建节点。
-5. 桌面版使用应用窗口；只有 Web 模式才在浏览器打开输出的 `web`。首页不填写 Key，不选择应用内聊天模型。先调用 `getAppState`；需要新项目时用宿主文件能力创建用户指定目录，再调用 `openProject`。通过 `addCanvas`、节点工具和工作区文件工具创建成果；实际媒体生成遵循 [Key 与充值引导](../SKILL.md#api-key-与充值引导)。
+5. 桌面版使用应用窗口；只有 Web 模式才在浏览器打开输出的 `web`。首次使用由用户在客户端完成 Key 配置，再调用 `getAppState`；需要新项目时用宿主文件能力创建用户指定目录，再调用 `openProject`。通过 `addCanvas`、节点工具和工作区文件工具创建成果；实际媒体生成遵循 [Key 与充值引导](../SKILL.md#api-key-与充值引导)。
 
 仍复用原生 `build/mcp/stdio.js --runtime <实际路径> --external`；不要改成自建 HTTP MCP、把本地 MCP token 填入配置，或用内置 Agent 代替当前 Harness。宿主若不提供 MCP resources 读取能力，先使用同级原生 Skill 中已有的工具说明；缺少必需资料时报告具体限制，不能编造接口。
 

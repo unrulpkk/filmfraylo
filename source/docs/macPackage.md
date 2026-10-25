@@ -4,7 +4,7 @@
 
 此包是可选网页版，真正桌面版见 desktopPackage.md。手动安装时，打开 Web DMG，将 FilmFrayloWeb.app 拖入 Applications 后再启动。不要直接从只读 DMG 中安装 Skill：安装器需要记录持久的应用路径。Web 应用启动本地服务并在默认浏览器打开 http://127.0.0.1:3000。
 
-数据保存在 `~/Library/Application Support/FilmFraylo/data`，与应用包分离。替换或移动应用不删除项目。没有 safillu Key 可以稍后配置，创建画布与文本节点；生成媒体才需要模型 Key。
+数据保存在 `~/Library/Application Support/FilmFraylo/data`，与应用包分离。替换或移动应用不删除项目。首次使用须配置 API Key 和语言模型，已保存的配置无需重复填写。内置输入框保留，可独立创作或通过外部 Harness 操作画布。
 
 ## Codex 首次使用
 

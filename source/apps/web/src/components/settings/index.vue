@@ -2,7 +2,7 @@
   <el-dialog v-model="visible" title="设置" width="min(1080px, calc(100vw - 32px))" alignCenter appendToBody>
     <div class="settings">
       <aside class="sidebar" aria-label="设置分类">
-        <template v-for="item in settingsPanels" :key="item.id">
+        <template v-for="item in settingsPanelList" :key="item.id">
           <h3 v-if="item.groupLabel" class="settingsGroupLabel">{{ item.groupLabel }}</h3>
           <button
             class="settingsItem"
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent, shallowRef } from "vue";
+import { computed, defineAsyncComponent, provide, ref, shallowRef, watch } from "vue";
 import { hasDesktopUpdate } from "@/stores/desktopUpdate";
 import { isMobile } from "@/lib/mobile";
 import {
@@ -46,7 +46,6 @@ import {
   IconBuildingStore,
   IconInfoCircle,
   IconCode,
-  IconShieldLock,
   IconPlugConnected,
   IconUserCog,
   IconSubtitlesAi,
@@ -82,12 +81,22 @@ const settingsPanels = [
     groupLabel: "其他",
     component: defineAsyncComponent(() => import("./panels/personalization.vue")),
   },
-  { id: "privacy", label: "隐私", icon: IconShieldLock, component: defineAsyncComponent(() => import("./panels/privacy.vue")) },
   { id: "developer", label: "开发者选项", icon: IconCode, component: defineAsyncComponent(() => import("./panels/developer/index.vue")) },
   { id: "about", label: "关于", icon: IconInfoCircle, component: defineAsyncComponent(() => import("./panels/about.vue")) },
 ];
 const activePanel = shallowRef(settingsPanels[0]!);
 const visible = defineModel<boolean>({ default: false });
+
+const developerRevealed = ref(false);
+provide("revealDeveloper", () => {
+  developerRevealed.value = true;
+});
+const settingsPanelList = computed(() => (developerRevealed.value ? settingsPanels : settingsPanels.filter((item) => item.id !== "developer")));
+watch(visible, (value) => {
+  if (value) return;
+  developerRevealed.value = false;
+  if (activePanel.value.id === "developer") activePanel.value = settingsPanels[0]!;
+});
 </script>
 
 <style lang="scss" scoped>

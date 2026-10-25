@@ -75,7 +75,7 @@ async function loadProviders() {
   const request = ++loadRequest;
   try {
     const { data } = await axios.get<{ data: MediaProvider[] }>("/api/providers/media/list");
-    if (request === loadRequest) providers.value = data.data;
+    if (request === loadRequest) providers.value = data.data.filter(provider => provider.id.toLowerCase() !== "tfrouter");
   } catch (error) {
     if (request === loadRequest) ElMessage.error(axios.isAxiosError(error) ? error.response?.data?.message || error.message : "读取媒体供应商失败");
   } finally {

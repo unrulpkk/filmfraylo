@@ -60,7 +60,6 @@ import canvasPanel from "./panels/canvas/canvasHost.vue";
 import type { DocumentNodeOptions } from "./panels/canvas/canvasFiles";
 import workspaceMenu from "./components/workspaceMenu.vue";
 import floatingAgent from "./components/floatingAgent.vue";
-import { settings as appSettings } from "@/stores/settings";
 
 const documentPanel = defineAsyncComponent(() => import("./panels/document/index.vue"));
 
@@ -71,7 +70,7 @@ const panelOptions = [
   { label: "画布", value: "canvas", icon: IconLayoutDashboard },
   { label: "文档", value: "document", icon: IconFileText },
 ];
-const agentVisible = ref(appSettings.value.externalHarness !== true);
+const agentVisible = ref(true);
 const agentWidth = ref(0);
 const settingsVisible = ref(false);
 const canvasPanelRef = ref<InstanceType<typeof canvasPanel>>();

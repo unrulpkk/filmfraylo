@@ -72,7 +72,7 @@ async function start() {
     // 只初始化全新目录；不覆盖已有用户配置或凭证。
     try {
       await writeFile(resolve(data, "settings.json"), JSON.stringify({ settings: {
-        externalHarness: true, ui: { startupAnimation: false },
+        ui: { startupAnimation: false },
         mcp: { enabled: true, token: randomBytes(32).toString("hex"), port: 10588 },
       } }, null, 2), { flag: "wx", mode: 0o600 });
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
