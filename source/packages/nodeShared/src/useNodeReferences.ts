@@ -19,7 +19,7 @@ export function useNodeReferences(handleId = "in") {
     },
   });
   const referenceMentions = computed(() => refList.value.flatMap((item, index) =>
-    typeof item.dataType === "string" && ["IMAGE", "VIDEO", "AUDIO", "STRING"].includes(item.dataType)
+    typeof item.dataType === "string" && ["IMAGE", "VIDEO", "AUDIO", "STRING", "FILE"].includes(item.dataType)
       ? [{
           id: referenceKey(item),
           name: `参考 ${index + 1}`,

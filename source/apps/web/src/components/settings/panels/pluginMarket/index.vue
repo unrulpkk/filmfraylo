@@ -3,6 +3,7 @@
     <div class="marketToolbar">
       <nav class="marketNav" aria-label="插件列表">
         <button class="navButton" type="button" :aria-pressed="activeTab === 'installed'" @click="activeTab = 'installed'">已安装</button>
+        <button class="navButton" type="button" :aria-pressed="activeTab === 'mcp'" @click="activeTab = 'mcp'">MCP</button>
         <button class="navButton" type="button" :aria-pressed="activeTab === 'ffmpeg'" @click="activeTab = 'ffmpeg'">FFmpeg</button>
       </nav>
       <div class="marketActions">
@@ -18,7 +19,7 @@
           </template>
         </template>
       </div>
-      <div v-if="activeTab !== 'ffmpeg'" class="typeFilters" role="group" aria-label="插件类型">
+      <div v-if="activeTab === 'installed'" class="typeFilters" role="group" aria-label="插件类型">
         <button class="filterButton" type="button" :aria-pressed="selectedType === 'all'" @click="selectedType = 'all'">
           全部
           <span v-if="activeTab === 'installed' && installedCounts.all !== undefined" class="filterCount">{{ installedCounts.all }}</span>
@@ -36,13 +37,14 @@
           <span v-if="activeTab === 'installed' && installedCounts[type] !== undefined" class="filterCount">{{ installedCounts[type] }}</span>
         </button>
       </div>
-      <form v-if="activeTab !== 'ffmpeg'" class="marketSearch" role="search" @submit.prevent="applySearch">
+      <form v-if="activeTab === 'installed'" class="marketSearch" role="search" @submit.prevent="applySearch">
         <el-input v-model="searchQuery" size="small" placeholder="搜索插件" aria-label="搜索插件" clearable @clear="applySearch" />
         <el-button size="small" type="primary" nativeType="submit">搜索</el-button>
       </form>
     </div>
 
     <ffmpeg v-if="activeTab === 'ffmpeg'" :visible />
+    <mcpServers v-else-if="activeTab === 'mcp'" :visible />
     <template v-else>
       <el-alert v-for="message in visibleLoadErrors" :key="message" class="loadError" :title="message" type="error" :closable="false" showIcon />
 
@@ -82,7 +84,10 @@
               </h3>
               <span class="pluginId" :title="plugin.name">{{ plugin.name }}</span>
             </div>
-            <el-tag :type="pluginTypes[plugin.type].tagType" size="small">{{ pluginTypes[plugin.type].label }}</el-tag>
+            <div class="pluginTags">
+              <el-tag v-if="plugin.builtin" type="info" size="small" effect="plain">内置</el-tag>
+              <el-tag :type="pluginTypes[plugin.type].tagType" size="small">{{ pluginTypes[plugin.type].label }}</el-tag>
+            </div>
           </div>
           <p v-if="plugin.description" class="pluginDescription">{{ plugin.description }}</p>
           <el-text v-if="plugin.loadError" type="danger" size="small">{{ plugin.loadError }}</el-text>
@@ -189,6 +194,7 @@ import pluginConfigDialog from "./pluginConfigDialog.vue";
 import extensionAssociationsDialog from "./extensionAssociationsDialog.vue";
 import skillEditorDialog from "./skillEditorDialog.vue";
 import ffmpeg from "./ffmpeg.vue";
+import mcpServers from "./mcpServers.vue";
 import agentEditorDialog from "./agentEditorDialog.vue";
 import agentConnectDialog from "./agentConnectDialog.vue";
 import a2aSettingsDialog from "./a2aSettingsDialog.vue";
@@ -207,7 +213,7 @@ const pluginTypes = {
   agent: { label: "Agent", path: agentMarketEnabled ? "agents" : null, icon: IconSparkles2, tagType: "danger" },
 } as const;
 // ACT: 当前发行版只管理本地插件，不连接远程市场。
-const activeTab = ref<"installed" | "ffmpeg">("installed");
+const activeTab = ref<"installed" | "mcp" | "ffmpeg">("installed");
 const selectedType = ref<PluginType | "all">("all");
 const installedPlugins = ref<Plugin[]>([]);
 const loading = ref(false);
@@ -300,7 +306,7 @@ function hasMissingConfig(plugin: Plugin) {
 watch(
   () => [visible, activeTab.value, refreshKey.value],
   async (_value, _previous, onCleanup) => {
-    if (!visible || activeTab.value === "ffmpeg") return;
+    if (!visible || activeTab.value !== "installed") return;
     const controller = new AbortController();
     onCleanup(() => controller.abort());
     loading.value = true;
@@ -632,8 +638,13 @@ async function updatePlugin(plugin: Plugin, action: "setEnabled" | "uninstall", 
         justify-content: space-between;
         gap: 12px;
 
-        > .el-tag {
+        .pluginTags {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 4px;
           flex-shrink: 0;
+          max-width: 50%;
         }
 
         .pluginHeading {

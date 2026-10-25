@@ -10,11 +10,14 @@ import {
   detectSupportedImageMimeTypeFromFile, type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { CanvasContext, QuestionContext, ToolContext, ToolFiles } from "@toonflow/tools-scaffold/runtime";
+import { asrRequestSchema } from "@toonflow/tools-scaffold/runtime";
 import conf from "@/utils/conf";
 import { isWithin, resolveWorkspacePath, writeWorkspaceFile, renameWorkspaceFile, lockWorkspaceFiles, protectWorkspaceRoot } from "@/utils/workspace/files";
 import { listTools, loadTool, validateToolConfig } from "@/utils/plugins/tools";
 import { createSkillContext } from "@/agent/skills";
 import { createAssetContext } from "@/agent/assets";
+import { readDocument } from "@/utils/documents";
+import { createMcpAgentTools } from "@/utils/mcp/servers";
 
 export function createAgentToolContext(cwd: string, config: Record<string, unknown> = {}, canvas?: CanvasContext, question?: QuestionContext, workspaceAvailable = true): ToolContext {
   const skillsDirectory = join(dirname(conf.path), "skills");
@@ -44,9 +47,17 @@ export function createAgentToolContext(cwd: string, config: Record<string, unkno
     writeFile: (path, content, exclusive = false) => withWritePaths([path], async ([target]) => {
       await writeWorkspaceFile(target, content, exclusive);
     }),
-    mkdir: (path, recursive = false) => withWritePaths([path], async ([target]) => {
-      await mkdir(target, { recursive });
-    }),
+    mkdir: async (path, recursive = false) => {
+      const target = await resolvePath(path);
+      // ACT: 递归创建已有目录无需修改，锁父目录会与 Agent 自己持有的会话文件锁冲突。
+      if (recursive && (await stat(target).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      }))?.isDirectory()) return;
+      const release = lockWorkspaceFiles([target]);
+      try { await mkdir(target, { recursive }); }
+      finally { release(); }
+    },
     rename: (path, target) => withWritePaths([path, target], async ([source, destination]) => {
       protectWorkspaceRoot(cwd, source);
       protectWorkspaceRoot(cwd, destination);
@@ -65,6 +76,19 @@ export function createAgentToolContext(cwd: string, config: Record<string, unkno
     cwd, config, files, resolvePath, writeFile: files.writeFile, canvas, question,
     skills: workspaceAvailable ? createSkillContext(cwd) : undefined, assets: workspaceAvailable ? createAssetContext(cwd) : undefined,
     browser: createBrowserContext(cwd),
+    asr: {
+      async transcribe(path, options = {}) {
+        requireWorkspace();
+        options.signal?.throwIfAborted();
+        if (!canvas) throw new Error("当前对话未连接画布，无法使用浏览器语音识别");
+        const source = await resolvePath(path);
+        const args = asrRequestSchema.parse({ path: relative(cwd, source).replaceAll("\\", "/"), lang: options.lang });
+        options.signal?.throwIfAborted();
+        const result = await canvas.call({ name: "transcribeAudio", args }, options.signal);
+        if (typeof result !== "string") throw new Error("语音识别返回了无效的文本");
+        return result;
+      },
+    },
     ffmpeg: signal => { requireWorkspace(); return createWorkspaceFfmpeg(cwd, signal); },
     media: workspaceAvailable ? {
       listModels: listMediaModels,
@@ -73,13 +97,25 @@ export function createAgentToolContext(cwd: string, config: Record<string, unkno
       generateAudio: (request, signal) => generateMedia(cwd, "audio", request, signal),
     } : undefined,
     sdk: {
-      defineTool, createReadToolDefinition, createWriteToolDefinition, createEditToolDefinition, createLsToolDefinition,
+      defineTool, createWriteToolDefinition, createEditToolDefinition, createLsToolDefinition,
+      createReadToolDefinition: (directory, options) => {
+        const operations = options?.operations ?? {
+          readFile: (path: string) => files.readFile(path, true),
+          access: (path: string) => files.access(path, true),
+          detectImageMimeType: (path: string) => files.detectImageMimeType(path, true),
+        };
+        const tool = createReadToolDefinition(directory, { ...options, operations: {
+          ...operations,
+          readFile: async path => readDocument(path, await operations.readFile(path)),
+        } });
+        return { ...tool, description: `${tool.description}\nHTML、Markdown、JSON、XML、配置和代码文件读取原文；Office、OpenDocument、RTF、EPUB、CSV、PDF 在本地解析为 Markdown。offset/limit 对应读取后的行。扫描 PDF 需要先做 OCR。` };
+      },
       detectSupportedImageMimeTypeFromFile: path => files.detectImageMimeType(path, true),
     },
   };
 }
 
-export async function createAgentTools(cwd: string, canvas?: CanvasContext, question?: QuestionContext): Promise<ToolDefinition[]> {
+export async function createAgentTools(cwd: string, canvas?: CanvasContext, question?: QuestionContext, includeMcp = true): Promise<ToolDefinition[]> {
   const tools: ToolDefinition[] = [];
   const names = new Set<string>();
   const context = createAgentToolContext(cwd, {}, canvas, question);
@@ -102,5 +138,6 @@ export async function createAgentTools(cwd: string, canvas?: CanvasContext, ques
       });
     }
   }
+  if (includeMcp) tools.push(...await createMcpAgentTools());
   return tools;
 }

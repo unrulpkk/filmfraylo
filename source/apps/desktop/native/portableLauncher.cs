@@ -11,10 +11,11 @@ internal static class portableLauncher
         try
         {
             string root = AppDomain.CurrentDomain.BaseDirectory;
-            string launcher = Path.Combine(root, "app", "bin", "launcher.exe");
+            string launcher = Path.Combine(root, "app", "Resources", "app", "startupLauncher.exe");
+            if (!File.Exists(launcher)) launcher = Path.Combine(root, "app", "bin", "launcher.exe");
             var options = new ProcessStartInfo(launcher)
             {
-                WorkingDirectory = Path.GetDirectoryName(launcher),
+                WorkingDirectory = Path.Combine(root, "app", "bin"),
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden

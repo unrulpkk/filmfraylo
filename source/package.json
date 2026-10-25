@@ -52,6 +52,9 @@
     "@types/postcss-pxtorem": "^6.1.0",
     "postcss": "^8.5.28",
     "postcss-pxtorem": "^6.1.0",
-    "typescript": "^7.0.2"
+    "typescript": "~6.0.3"
+  },
+  "dependencies": {
+    "@toonflow/product": "workspace:*"
   }
 }

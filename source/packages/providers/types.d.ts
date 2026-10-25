@@ -220,10 +220,50 @@ interface ProviderDefinition<TRules extends readonly ProviderFormRule[] = readon
   checkForUpdates?: (this: ProviderContext<ProviderConfig<TRules>>) => Promise<ProviderUpdateInfo>;
   /** 获取更新文件的完整源码；写入与应用由宿主负责。 */
   updateVendor?: (this: ProviderContext<ProviderConfig<TRules>>) => Promise<string>;
+  /**
+   * 只读估价，不创建生成任务或扣费。request.type 区分图片、视频和音频。
+   * 参考素材只传元信息，不传文件内容或地址；其余参数与对应生成请求一致。
+   * 返回 { price, tips }，由供应商自由提供价格展示文本与提示；null 表示当前参数无法估价，节点保留占位。
+   */
+  getPrice?: (this: ProviderContext<ProviderConfig<TRules>>, request: ProviderPriceRequest) => Promise<ProviderPrice | null>;
+  /** 查询当前配置账户的余额；计价单位由供应商返回。 */
+  getBalance?: (this: ProviderContext<ProviderConfig<TRules>>) => Promise<ProviderBalance>;
   /** 未实现的方法保持缺省，调用方据此判断能力是否可用。 */
   generateImage?: GenerateMedia<ImageRequest, ProviderConfig<TRules>>;
   generateVideo?: GenerateMedia<VideoRequest, ProviderConfig<TRules>>;
   generateAudio?: GenerateMedia<AudioRequest, ProviderConfig<TRules>>;
   /** 可选的供应商媒体预处理；未实现时保持原请求。 */
   processMedia?: (this: ProviderContext<ProviderConfig<TRules>>, request: ImageRequest | VideoRequest | AudioRequest) => Promise<ImageRequest | VideoRequest | AudioRequest>;
+}
+
+/** 仅用于展示，不参与余额计算；没有额外提示时 tips 返回空字符串。 */
+interface ProviderPrice {
+  price: string;
+  tips: string;
+}
+
+/** 估价专用素材元信息；不包含 base64、二进制、URL 或本地路径。未知字段省略，不能视作 0。 */
+interface ProviderPriceReference {
+  mimeType: string;
+  sizeBytes: number;
+  width?: number;
+  height?: number;
+  /** 参考视频或音频的时长，单位秒；不是输出时长。 */
+  duration?: number;
+  frameRate?: number;
+}
+
+/** 按实际参考素材的类别、数量和元信息计价；mode 仅描述生成模式，不能代替实际参考内容。 */
+type ProviderPriceRequest =
+  | ({ type: "image"; images?: ProviderPriceReference[]; mask?: ProviderPriceReference } & Omit<ImageRequest, "images" | "mask">)
+  | ({ type: "video"; images?: ProviderPriceReference[]; videos?: ProviderPriceReference[]; audios?: ProviderPriceReference[]; firstFrame?: ProviderPriceReference; lastFrame?: ProviderPriceReference } & Omit<VideoRequest, "images" | "videos" | "audios" | "firstFrame" | "lastFrame">)
+  | ({ type: "audio"; images?: ProviderPriceReference[]; audios?: (ProviderPriceReference & { text?: string })[] } & Omit<AudioRequest, "images" | "audios">);
+
+interface ProviderBalance {
+  balance: number;
+  unit: string;
+  /** null 表示密钥额度无限制；缺省表示供应商不提供独立密钥额度。 */
+  keyBalance?: number | null;
+  totalConsumption?: number;
+  totalRecharge?: number;
 }

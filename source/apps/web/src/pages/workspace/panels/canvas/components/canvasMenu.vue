@@ -1,6 +1,6 @@
 <template>
   <panel class="canvasMenuPanel" position="top-left">
-    <el-card class="canvasMenu" shadow="never" :bodyStyle="{ padding: '5px 10px' }">
+    <el-card class="canvasMenu" shadow="never" :bodyStyle="{ padding: '2px 4px' }">
       <div class="menuContent">
         <el-input v-model="projectNameDraft" class="workspaceNameInput" :style="{ '--workspaceName': JSON.stringify(projectNameDraft || ' ') }" size="small" :title="directory" :disabled="!workspaceStore.project" aria-label="项目名称"
           @keydown.stop @keydown.enter="saveProjectName" @keydown.esc.prevent="projectNameDraft = workspaceName" @blur="saveProjectName" />
@@ -8,7 +8,7 @@
         <el-popover v-model:visible="canvasListVisible" trigger="click" placement="bottom-start" :width="320" :showArrow="false" :disabled="!directory">
           <template #reference>
             <el-button class="canvasTrigger" text :loading="busy" :disabled="busy || !directory" aria-label="切换画布" :aria-expanded="canvasListVisible">
-              <span>{{ activeCanvasName }}</span><icon-chevron-down :size="14" />
+              <span>{{ activeCanvasName }}</span><component :is="canvasListVisible ? IconChevronUp : IconChevronDown" :size="14" aria-hidden="true" />
             </el-button>
           </template>
           <div ref="canvasPicker" class="canvasPicker" @keydown.esc="canvasListVisible = false">
@@ -18,11 +18,11 @@
               <el-button class="iconButton" text :icon="IconPlus" :disabled="pickerBusy || editingId !== null || folderDraft !== null" title="新增画布" aria-label="新增画布" @click="handleAddCanvas" />
             </div>
             <el-scrollbar v-loading="loadingTree" maxHeight="min(440px, calc(100dvh - 198px))">
-              <el-tree ref="canvasTree" class="canvasTree" :data="treeEntries" nodeKey="path" :props="{ label: 'name' }" :currentNodeKey="activeCanvasId" :filterNodeMethod="filterEntry" defaultExpandAll highlightCurrent emptyText="" @nodeClick="selectEntry">
-                <template #default="{ data }">
+              <el-tree v-if="canvasListVisible" ref="canvasTree" class="canvasTree" :data="treeEntries" nodeKey="path" :props="{ label: 'name', isLeaf: (entry: Record<string, unknown>) => entry.type === 'file' || entry.draft === true || entry.empty === true }" lazy :load="loadTreeNode" :defaultExpandedKeys="expandedFolders" :autoExpandParent="false" :icon="IconChevronRight" :currentNodeKey="activeCanvasId" :filterNodeMethod="filterEntry" highlightCurrent emptyText="" @nodeClick="selectEntry" @nodeExpand="expandFolder" @nodeCollapse="collapseFolder">
+                <template #default="{ data, node }">
                   <div class="canvasEntry" :title="data.path" @contextmenu="openItemMenu($event, data)">
-                    <icon-folder-filled v-if="data.type === 'directory'" class="folderIcon" :size="30" />
-                    <icon-artboard v-else class="canvasIcon" :size="26" />
+                    <component v-if="data.type === 'directory'" :is="node.expanded && !node.isLeaf ? IconFolderOpen : IconFolder" class="folderIcon" :size="18" aria-hidden="true" />
+                    <icon-vector v-else class="canvasIcon" :size="18" />
                     <el-input v-if="data.draft" ref="folderInput" v-model="folderDraft" class="nameEditor" size="small" aria-label="文件夹名称" :disabled="busy" :maxlength="120" @click.stop @keydown.stop @keydown.enter.prevent="saveFolder" @keydown.esc.prevent="cancelFolder" @blur="saveFolder" />
                     <el-input v-else-if="editingId === data.path" ref="nameInput" v-model="canvasName" class="nameEditor" size="small" :disabled="busy" :maxlength="120" :aria-label="newCanvasId === data.path ? '新画布名称' : '画布名称'" @click.stop @keydown.stop @keydown.enter="saveCanvas" @keydown.esc.prevent="finishEdit" @blur="saveCanvas" />
                     <span v-else class="entryName">{{ data.name }}</span>
@@ -38,6 +38,25 @@
       </div>
     </el-card>
     <div class="menuExtension"><slot /></div>
+  </panel>
+  <panel v-if="visibleProviderBalances.length" class="balanceMenuPanel" position="top-right">
+    <div class="balanceList" tabindex="0" aria-label="供应商余额">
+      <el-card v-for="item in visibleProviderBalances" :key="item.id" class="balanceCard" shadow="never" :bodyStyle="{ padding: '2px 4px' }">
+        <el-popover v-if="item.id === 'tfRouter'" :visible="balanceVisible" @update:visible="value => { if (!rechargeVisible) balanceVisible = value; }" trigger="click" placement="bottom-end" :width="360" :showArrow="false">
+          <template #reference>
+            <el-button class="balanceTrigger" text :aria-busy="item.loading" :title="item.error || 'TF-Router 剩余可用余额'" aria-label="TF-Router 余额与充值">
+              <span class="providerLabel">{{ item.label }}</span>
+              <span>{{ item.balance ? `${balanceFormat.format(Math.min(item.balance.balance, item.balance.keyBalance ?? Infinity))} ${item.balance.unit}` : '—' }}</span>
+            </el-button>
+          </template>
+          <tfAccount v-if="balanceVisible" :apiKey="tfBalanceApiKey" :visible="balanceVisible" :saveApiKey="saveTfMediaApiKey" @rechargeVisibleChange="rechargeVisible = $event" />
+        </el-popover>
+        <el-button v-else class="balanceTrigger" text :loading="item.loading" :title="item.error || `点击刷新 ${item.label} 余额`" :aria-label="`刷新 ${item.label} 余额`" @click="refreshProviderBalance(item.id)">
+          <span class="providerLabel">{{ item.label }}</span>
+          <span>{{ item.balance ? `${balanceFormat.format(Math.min(item.balance.balance, item.balance.keyBalance ?? Infinity))} ${item.balance.unit}` : '—' }}</span>
+        </el-button>
+      </el-card>
+    </div>
   </panel>
   <el-dropdown ref="itemMenu" trigger="contextmenu" virtualTriggering :virtualRef="menuAnchor" placement="bottom-start" :showArrow="false" :hideOnClick="false" :appendTo="canvasPicker" popperClass="canvasActionMenu" @command="handleItemCommand" @visibleChange="(opened: boolean) => { if (!opened) moveVisible = false; }">
     <template #dropdown>
@@ -62,14 +81,16 @@
 
 <script setup lang="ts">
 import axios from "axios";
-import { translate } from "@toonflow/i18n/vue";
-import { computed, inject, nextTick, ref, shallowRef, watch, type ShallowRef } from "vue";
+import { locale, translate } from "@toonflow/i18n/vue";
+import { computed, inject, nextTick, onBeforeUnmount, ref, shallowRef, watch, type ShallowRef } from "vue";
 import { Panel, useVueFlow, type FlowExportObject } from "@vue-flow/core";
-import { ElMessage, ElMessageBox, type DropdownInstance, type FilterNodeMethodFunction, type InputInstance, type TreeInstance } from "element-plus";
-import { IconArtboard, IconCheck, IconChevronDown, IconChevronRight, IconDots, IconFolder, IconFolderFilled, IconFolderPlus, IconPlus, IconSearch } from "@tabler/icons-vue";
+import { ElMessage, ElMessageBox, type DropdownInstance, type FilterNodeMethodFunction, type InputInstance, type LoadFunction, type TreeInstance } from "element-plus";
+import { IconVector, IconCheck, IconChevronDown, IconChevronUp, IconChevronRight, IconDots, IconFolder, IconFolderOpen, IconFolderPlus, IconPlus, IconSearch } from "@tabler/icons-vue";
 import { useWorkspaceStore } from "@/stores/workspace";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { getCanvasAssetDirectories, isCanvasFile } from "@/pages/workspace/canvasFile";
+import tfAccount from "@/components/settings/tfAccount.vue";
+import { providerBalances, tfBalanceApiKey, saveTfMediaApiKey, refreshProviderBalance } from "@/lib/providerBilling";
 
 const props = defineProps<{
   directory?: string;
@@ -78,6 +99,10 @@ const props = defineProps<{
   flushSave: (action?: () => Promise<void>) => Promise<void>;
 }>();
 const workspaceStore = useWorkspaceStore();
+const balanceVisible = ref(false);
+const rechargeVisible = ref(false);
+const balanceFormat = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 6 }));
+const visibleProviderBalances = computed(() => providerBalances.value.filter(item => item.id !== "tfRouter" || (item.balance && !item.error)));
 const workspaceName = computed(() => workspaceStore.project?.name || "未命名工作区");
 const projectNameDraft = ref("");
 watch([() => workspaceStore.project?.directory, workspaceName], () => {
@@ -103,6 +128,7 @@ watch(canvases, () => {
 const canvasListVisible = ref(false);
 const activeCanvasName = computed(() => canvases.value.find(canvas => canvas.id === activeCanvasId.value)?.name || translate("选择画布"));
 const busy = ref(false);
+const initialized = ref(false);
 const loadError = ref("");
 const editingId = ref<string | null>(null);
 const newCanvasId = ref<string | null>(null);
@@ -111,7 +137,11 @@ const canvasName = ref("");
 const renameError = ref("");
 const { toObject, setNodes, setEdges, setViewport } = useVueFlow();
 type CanvasEntry = { path: string; name: string; type: "file" | "directory"; children?: CanvasEntry[]; empty?: boolean; draft?: boolean };
-const folders = shallowRef<CanvasEntry[]>([]);
+const folders = inject<ShallowRef<CanvasEntry[]>>("canvasFolders", shallowRef<CanvasEntry[]>([]));
+const loadedDirectories = inject<ShallowRef<string[]>>("canvasLoadedDirectories", shallowRef<string[]>([]));
+const expandedFolders = ref<string[]>([]);
+const pendingDirectories = new Map<string, Promise<void>>();
+let treeController = new AbortController();
 const canvasTree = ref<TreeInstance>();
 const canvasPicker = ref<HTMLElement>();
 const searchQuery = ref("");
@@ -150,8 +180,87 @@ function parentPath(path: string) { return path.slice(0, path.lastIndexOf("/") +
 const filterEntry: FilterNodeMethodFunction = (query: string, entry) => !!entry.draft || String(entry.path).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
 watch([searchQuery, treeEntries], async () => { await nextTick(); canvasTree.value?.filter(searchQuery.value); });
 watch(canvasListVisible, opened => {
-  if (opened) refreshTree().catch(error => { renameError.value = errorMessage(error, "读取画布失败"); });
-  else { treeRequest++; loadingTree.value = false; itemMenu.value?.handleClose(); cancelFolder(); }
+  if (!opened) { treeRequest++; loadingTree.value = false; itemMenu.value?.handleClose(); cancelFolder(); }
+});
+onBeforeUnmount(() => treeController.abort());
+
+function treeChildren(path: string): CanvasEntry[] {
+  let entries = treeEntries.value;
+  if (!path) return entries;
+  let current = "";
+  for (const name of path.split("/")) {
+    current = current ? `${current}/${name}` : name;
+    entries = entries.find(entry => entry.path === current)?.children ?? [];
+  }
+  return entries;
+}
+
+function mergeCanvases(loaded: Canvas[]) {
+  const known = new Set(canvases.value.map(canvas => canvas.id));
+  const added = loaded.filter(canvas => !known.has(canvas.id));
+  if (added.length) canvases.value = [...canvases.value, ...added];
+}
+
+async function loadDirectory(path: string) {
+  if (loadedDirectories.value.includes(path)) return;
+  const pending = pendingDirectories.get(path);
+  if (pending) return pending;
+  const directory = props.directory;
+  if (!directory) return;
+  const signal = treeController.signal;
+  const task = (async () => {
+    const loaded = await listCanvases(directory, path, false, signal);
+    checkCanvasDirectory(directory, signal);
+    const names = new Set(loaded.folders.map(folder => folder.path));
+    const removed = folders.value.filter(folder => parentPath(folder.path) === path && !names.has(folder.path)).map(folder => folder.path);
+    loadedDirectories.value = [...loadedDirectories.value.filter(value => !removed.some(folder => value === folder || value.startsWith(`${folder}/`))), path];
+    folders.value = [...folders.value.filter(folder => parentPath(folder.path) !== path && !removed.some(value => folder.path.startsWith(`${value}/`)))
+      .map(folder => folder.path === path ? { ...folder, empty: loaded.empty } : folder), ...loaded.folders];
+    mergeCanvases(loaded.canvases);
+  })();
+  pendingDirectories.set(path, task);
+  try { await task; }
+  finally { if (pendingDirectories.get(path) === task) pendingDirectories.delete(path); }
+}
+
+const loadTreeNode: LoadFunction = (node, resolve, reject) => {
+  const path = node.level === 0 ? "" : String(node.data.path);
+  if (node.level === 0) { resolve(treeChildren(path)); return; }
+  if (!expandedFolders.value.includes(path)) expandedFolders.value.push(path);
+  if (loadedDirectories.value.includes(path)) { resolve(treeChildren(path)); return; }
+  void loadDirectory(path).then(() => resolve(treeChildren(path))).catch(error => {
+    reject();
+    expandedFolders.value = expandedFolders.value.filter(value => value !== path);
+    if (!axios.isCancel(error) && !(error instanceof Error && error.name === "AbortError")) renameError.value = errorMessage(error, "读取文件夹失败");
+  });
+};
+
+function collapseFolder(entry: CanvasEntry) {
+  expandedFolders.value = expandedFolders.value.filter(path => path !== entry.path && !path.startsWith(`${entry.path}/`));
+}
+
+function expandFolder(entry: CanvasEntry) {
+  if (!expandedFolders.value.includes(entry.path)) expandedFolders.value.push(entry.path);
+}
+
+watch(searchQuery, (query, _previous, onCleanup) => {
+  if (!query.trim()) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => { void getCanvases(controller.signal).catch(error => {
+    if (!controller.signal.aborted) renameError.value = errorMessage(error, "搜索画布失败");
+  }); }, 250);
+  onCleanup(() => { clearTimeout(timer); controller.abort(); });
+});
+
+watch(moveVisible, (visible, _previous, onCleanup) => {
+  if (!visible || !props.directory) return;
+  const directory = props.directory;
+  const controller = new AbortController();
+  onCleanup(() => controller.abort());
+  void listCanvasEntries(directory, "", true, controller.signal).then(loaded => {
+    checkCanvasDirectory(directory, controller.signal);
+    folders.value = loaded.folders;
+  }).catch(error => { if (!controller.signal.aborted) renameError.value = errorMessage(error, "读取移动目录失败"); });
 });
 
 async function refreshTree() {
@@ -160,10 +269,11 @@ async function refreshTree() {
   const request = ++treeRequest;
   loadingTree.value = true;
   try {
-    const loaded = await listCanvasEntries(directory);
-    if (request !== treeRequest || directory !== props.directory) return;
-    // 共享画布列表由文件操作更新；目录扫描不能覆盖列表并卸载正在移动或生成的画布。
-    folders.value = loaded.folders;
+    treeController.abort();
+    treeController = new AbortController();
+    pendingDirectories.clear();
+    loadedDirectories.value = [];
+    await loadDirectory("");
   } catch (error) {
     if (request !== treeRequest || directory !== props.directory) return;
     throw error;
@@ -176,11 +286,17 @@ function selectEntry(entry: CanvasEntry) {
 
 watch(() => props.directory, async (directory, _previous, onCleanup) => {
   let cancelled = false;
-  onCleanup(() => { cancelled = true; });
+  treeController.abort();
+  treeController = new AbortController();
+  const controller = treeController;
+  onCleanup(() => { cancelled = true; controller.abort(); });
+  pendingDirectories.clear();
+  expandedFolders.value = [];
+  initialized.value = false;
   busy.value = true;
   loadError.value = "";
   treeRequest++;
-  folders.value = [];
+  if (props.initialCanvasId === undefined) { folders.value = []; loadedDirectories.value = []; }
   folderDraft.value = null;
   searchQuery.value = "";
   boundCanvas.value = undefined;
@@ -196,16 +312,16 @@ watch(() => props.directory, async (directory, _previous, onCleanup) => {
       await applyCanvas(props.initialCanvasId, directory);
       return;
     }
-    let entries = await listCanvases(directory);
+    let entries = await listCanvases(directory, "", false, controller.signal);
     let loaded = entries.canvases;
     if (cancelled) return;
-    if (!loaded.length) {
+    if (!loaded.length && !entries.folders.length) {
       try {
         loaded = [await createCanvasFile(directory, "画布1")];
       } catch (err) {
         if (!axios.isAxiosError<{ data?: { code?: string } }>(err) || err.response?.status !== 409 || err.response.data.data?.code !== "EEXIST") throw err;
         // 同时打开工作区时，读取另一请求刚创建的默认画布，不覆盖同名文件。
-        entries = await listCanvases(directory);
+        entries = await listCanvases(directory, "", false, controller.signal);
         const refreshed = entries.canvases;
         // 画布1.json 若被其他 JSON 占用，则使用下一个空闲名称，保留原文件。
         loaded = refreshed.length ? refreshed : [await createCanvasFile(directory)];
@@ -213,6 +329,7 @@ watch(() => props.directory, async (directory, _previous, onCleanup) => {
     }
     if (cancelled) return;
     folders.value = entries.folders;
+    loadedDirectories.value = [""];
     canvases.value = loaded;
     if (canvases.value[0]) await applyCanvas(canvases.value[0].id, directory);
   } catch (err) {
@@ -221,7 +338,7 @@ watch(() => props.directory, async (directory, _previous, onCleanup) => {
       if (!props.initialCanvasId) ElMessage.error(loadError.value);
     }
   } finally {
-    if (!cancelled) busy.value = false;
+    if (!cancelled) { busy.value = false; initialized.value = true; }
   }
 }, { immediate: true });
 
@@ -229,8 +346,19 @@ function errorMessage(err: unknown, fallback: string) {
   return axios.isAxiosError<{ message?: string }>(err) ? err.response?.data.message || fallback : err instanceof Error ? err.message : fallback;
 }
 
-function getCanvases() {
+function peekCanvases() {
   return canvases.value.map(({ id, name }) => ({ id, name }));
+}
+
+async function getCanvases(signal?: AbortSignal) {
+  const directory = getCanvasDirectory(signal);
+  const callSignal = AbortSignal.any([treeController.signal, ...(signal ? [signal] : [])]);
+  const loaded = await listCanvases(directory, "", true, callSignal);
+  checkCanvasDirectory(directory, callSignal);
+  loadedDirectories.value = ["", ...loaded.folders.map(folder => folder.path)];
+  folders.value = loaded.folders;
+  mergeCanvases(loaded.canvases);
+  return loaded.canvases.map(({ id, name }) => ({ id, name }));
 }
 
 function getCanvasDirectory(signal?: AbortSignal) {
@@ -341,7 +469,7 @@ async function removeCanvas(canvas: Canvas) {
     if (performFileAction) await performFileAction(directory, "delete", id);
     await props.flushSave(async () => {
       checkCanvasDirectory(directory);
-      const retainedNodes = (await Promise.all((await listCanvases(directory)).canvases.map(canvas => readNodes(canvas.id)))).flat();
+      const retainedNodes = (await Promise.all((await listCanvases(directory, "", true)).canvases.map(canvas => readNodes(canvas.id)))).flat();
       const assetDirectories = getCanvasAssetDirectories(removedNodes, retainedNodes);
       checkCanvasDirectory(directory);
       const results = await Promise.allSettled(assetDirectories.map(path => files.remove(path, true).catch(error => {
@@ -375,32 +503,37 @@ async function createCanvasFile(directory: string, name?: string, signal?: Abort
   }
 }
 
-async function listCanvasEntries(directory: string) {
+async function listCanvasEntries(directory: string, path = "", recursive = false, signal?: AbortSignal) {
   const files = useWorkspaceFiles(directory);
-  const { entries } = await files.list();
+  const { entries, empty } = await files.list(path, signal);
   const folders: CanvasEntry[] = [];
-  // 文件接口只返回普通文件和目录，不跟随符号链接；素材和 Agent 目录不参与画布扫描。
+  // ACT: 初始化与展开只读当前一层；完整查询仅由搜索、Agent 列举及文件操作显式触发。
   for (let index = 0; index < entries.length; index++) {
-    checkCanvasDirectory(directory);
+    checkCanvasDirectory(directory, signal);
     const entry = entries[index]!;
     if (entry.type !== "directory" || ["assets", ".agent"].includes(entry.name.toLowerCase())) continue;
-    const children = await files.list(entry.path);
-    folders.push({ ...entry, empty: children.empty });
-    entries.push(...children.entries);
+    const folder: CanvasEntry = { ...entry };
+    folders.push(folder);
+    if (recursive) {
+      const children = await files.list(entry.path, signal);
+      folder.empty = children.empty;
+      entries.push(...children.entries);
+    }
   }
-  return { entries, folders: folders.sort((left, right) => left.path.localeCompare(right.path, "zh-CN", { numeric: true })) };
+  return { entries, empty, folders: folders.sort((left, right) => left.path.localeCompare(right.path, "zh-CN", { numeric: true })) };
 }
 
-async function listCanvases(directory: string): Promise<{ canvases: Canvas[]; folders: CanvasEntry[] }> {
+async function listCanvases(directory: string, path = "", recursive = false, signal?: AbortSignal) {
   const files = useWorkspaceFiles(directory);
-  const { entries, folders } = await listCanvasEntries(directory);
+  const { entries, folders, empty } = await listCanvasEntries(directory, path, recursive, signal);
   const loaded = await Promise.all(entries.filter(entry => entry.type === "file" && /\.json$/i.test(entry.name)).map(async entry => {
-    if (!(await isCanvasFile(files, entry.path))) return null;
+    if (!(await isCanvasFile(files, entry.path, signal))) return null;
     return { id: entry.path, name: entry.name.slice(0, -5) };
   }));
   return {
     canvases: loaded.filter(canvas => canvas !== null).sort((left, right) => left.name.localeCompare(right.name, "zh-CN", { numeric: true })),
     folders,
+    empty,
   };
 }
 
@@ -675,12 +808,47 @@ function syncDocumentNode(canvasId: string, nodeId: string, handleId: string, te
   else if (inline) (data.outputs ??= {})[handleId] = { dataType: "STRING", value: text };
 }
 
-defineExpose({ getCanvases, addCanvas, switchCanvas, renameCanvas, syncCanvasPath, syncDocumentNode, loadError });
+defineExpose({ getCanvases, peekCanvases, initialized, addCanvas, switchCanvas, renameCanvas, syncCanvasPath, syncDocumentNode, loadError });
 </script>
 
 <style lang="scss" scoped>
 .canvasMenuPanel.vue-flow__panel {
   left: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(50% - 90px);
+}
+
+.balanceMenuPanel.vue-flow__panel {
+  max-width: calc(50% - 90px);
+
+  .balanceList {
+    display: flex;
+    gap: 6px;
+    max-width: 520px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+
+    .balanceCard {
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      .providerLabel { color: var(--el-text-color-secondary); font-size: 12px; }
+      .balanceTrigger {
+        height: 28px;
+        padding: 0 3px;
+        font-size: 13px;
+        :deep(> span) { display: flex; align-items: center; gap: 4px; }
+      }
+    }
+  }
+}
+
+@container canvasWorkspace (max-width: 1040px) {
+  .balanceMenuPanel.vue-flow__panel {
+    top: 50px;
+    max-width: calc(100% - 30px);
+  }
 }
 
 .canvasPicker {
@@ -697,7 +865,7 @@ defineExpose({ getCanvases, addCanvas, switchCanvas, renameCanvas, syncCanvasPat
 
   .canvasTree {
     background: transparent;
-    :deep(.el-tree-node__content) { height: 44px; border-radius: var(--el-border-radius-base); }
+    :deep(.el-tree-node__content) { height: 36px; border-radius: var(--el-border-radius-base); }
     :deep(.el-tree-node__expand-icon) { padding: 6px; }
 
     .canvasEntry {
@@ -709,8 +877,7 @@ defineExpose({ getCanvases, addCanvas, switchCanvas, renameCanvas, syncCanvasPat
       height: 100%;
       padding-right: 4px;
 
-      .folderIcon { flex-shrink: 0; color: var(--el-text-color-secondary); }
-      .canvasIcon { flex-shrink: 0; width: 30px; color: var(--el-color-primary); }
+      .folderIcon, .canvasIcon { flex-shrink: 0; color: var(--el-text-color-secondary); }
       .entryName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
       .nameEditor { flex: 1; min-width: 0; }
       .selectedIcon { flex-shrink: 0; color: var(--el-color-primary); }
@@ -756,16 +923,22 @@ defineExpose({ getCanvases, addCanvas, switchCanvas, renameCanvas, syncCanvasPat
 }
 
 .canvasMenu {
-  margin-left: 100px;
+  margin-left: 76px;
+  min-width: 0;
 
   .menuContent {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 2px;
+
+    .el-divider { margin: 0 3px; }
 
     .workspaceNameInput {
       width: auto;
+      height: 28px;
       min-width: 2em;
+      max-width: 180px;
+      font-size: 13px;
 
       &::after {
         content: var(--workspaceName);
@@ -777,6 +950,7 @@ defineExpose({ getCanvases, addCanvas, switchCanvas, renameCanvas, syncCanvasPat
       :deep(.el-input__wrapper) {
         position: absolute;
         inset: 0;
+        background: transparent;
         box-shadow: none;
       }
 
@@ -788,10 +962,15 @@ defineExpose({ getCanvases, addCanvas, switchCanvas, renameCanvas, syncCanvasPat
     }
 
     .canvasTrigger {
-      padding: 0 4px;
-      :deep(> span) { display: flex; align-items: center; gap: 6px; }
-      span { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+      min-width: 0;
+      height: 28px;
+      padding: 0 3px;
+      font-size: 13px;
+      :deep(> span) { display: flex; align-items: center; gap: 4px; min-width: 0; }
+      span { min-width: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
     }
+
   }
 }
+
 </style>

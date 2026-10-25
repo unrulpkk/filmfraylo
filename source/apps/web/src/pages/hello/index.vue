@@ -57,7 +57,7 @@ import { saveSettings } from "@/stores/settings";
 import type { MediaProvider } from "@/components/settings/panels/mediaModel/types";
 import { useHelloStore } from "@/stores/hello";
 import anonymousData from "@/lib/anonymousData";
-import logoUrl from "@toonflow/assets/filmFrayloLogo.png";
+import { logoUrl } from "@/lib/product";
 import bg from "./bg.vue";
 import languageSelect from "@/components/languageSelect.vue";
 import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib/mobile";

@@ -1,6 +1,7 @@
 import { translate } from "@toonflow/i18n";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import type { AgentAttachment } from "./types";
+import { decodeTextFile } from "@toonflow/server/documentFormats";
 
 export function createPastedTextFile(text: string): File | undefined {
   if (text.length <= 2000 && text.split(/\r\n|\r|\n/).length <= 30) return;
@@ -11,7 +12,7 @@ export function createPastedTextFile(text: string): File | undefined {
 }
 
 export async function readTextAttachment(attachment: AgentAttachment, directory?: string) {
-  if (attachment.file) return attachment.file.text();
+  if (attachment.file) return decodeTextFile(new Uint8Array(await attachment.file.arrayBuffer()));
   if (!directory) throw new Error(translate("请先打开项目"));
-  return useWorkspaceFiles(directory).readText(attachment.path);
+  return decodeTextFile(new Uint8Array(await useWorkspaceFiles(directory).read(attachment.path)));
 }

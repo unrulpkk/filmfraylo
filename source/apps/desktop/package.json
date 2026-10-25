@@ -13,7 +13,8 @@
     "@toonflow/server": "workspace:*",
     "@toonflow/startup": "workspace:*",
     "@toonflow/i18n": "workspace:*",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "@toonflow/product": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

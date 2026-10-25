@@ -20,7 +20,7 @@
               <div v-else-if="!rows.length" class="mentionStatus" role="status">{{ emptyText }}</div>
               <div class="mentionRows" :style="{ height: `${listVirtualizer.getTotalSize()}px` }">
                 <button v-for="{ row, index, start } in visibleRows" :id="`${listId}-${index}`" :key="`${row.kind}-${row.id}`" class="mentionItem" :style="{ transform: `translateY(${start}px)` }" :class="{ active: index === activeIndex, unavailable: !row.available, checked: row.kind === 'output' && selectedOutputs.includes(row.id) }" type="button" role="option" :aria-selected="row.kind === 'output' ? selectedOutputs.includes(row.id) : index === activeIndex" :aria-disabled="!row.available || selecting" :aria-posinset="index + 1" :aria-setsize="rows.length" :title="row.name" @mouseenter="activeIndex = index" @mousedown.prevent @click="chooseRow(row)">
-                  <mentionThumbnail :thumbnail="row.thumbnail" :directory="directory" :globalAsset="row.kind === 'file'"><component :is="row.kind === 'canvas' ? IconLayoutGrid : row.kind === 'directory' ? IconFolder : row.dataType === 'image' || row.dataType === 'mask' ? IconPhoto : row.dataType === 'video' ? IconMovie : row.dataType === 'audio' ? IconMusic : row.dataType ? IconFileText : IconBox" :size="18" /></mentionThumbnail>
+                  <mentionThumbnail :thumbnail="row.thumbnail" :directory="directory" :globalAsset="row.kind === 'file'"><component :is="row.kind === 'canvas' ? IconVector : row.kind === 'directory' ? IconFolder : row.dataType === 'image' || row.dataType === 'mask' ? IconPhoto : row.dataType === 'video' ? IconVideo : row.dataType === 'audio' ? IconMusic : row.dataType ? IconFileText : IconBox" :size="18" /></mentionThumbnail>
                   <span class="mentionContent"><span class="mentionName">{{ row.name }}</span><span v-if="row.description" class="mentionDescription">{{ row.description }}</span></span>
                   <span v-if="!row.available" class="mentionState">{{ row.kind === 'file' ? '不支持' : '暂无输出' }}</span>
                   <span v-else-if="row.kind === 'output'" class="mentionCheck" :class="{ selected: selectedOutputs.includes(row.id) }"><icon-check v-if="selectedOutputs.includes(row.id)" :size="12" /></span>
@@ -44,7 +44,7 @@ import { translate } from "@toonflow/i18n/vue";
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch, type CSSProperties } from "vue";
 import { ClickOutside as vClickOutside, type ScrollbarInstance } from "element-plus";
 import { useVirtualizer } from "@tanstack/vue-virtual";
-import { IconAt, IconBox, IconCheck, IconChevronLeft, IconChevronRight, IconFileText, IconFolder, IconLayoutGrid, IconMovie, IconMusic, IconPhoto, IconSearch, IconX } from "@tabler/icons-vue";
+import { IconAt, IconBox, IconCheck, IconChevronLeft, IconChevronRight, IconFileText, IconFolder, IconVector, IconVideo, IconMusic, IconPhoto, IconSearch, IconX } from "@tabler/icons-vue";
 import type { AgentMention } from "@toonflow/server/agent/types";
 import { mentionAssetType } from "@toonflow/server/agent/mentionSources";
 import { useMentionSources, type MentionAsset, type MentionNode, type MentionOutput } from "./mentionSources";
@@ -146,7 +146,7 @@ async function loadList(append = false) {
   loadError.value = "";
   try {
     if (listingCanvases.value) {
-      const result = await sources.canvases();
+      const result = await sources.canvases(controller.signal);
       if (controller.signal.aborted) return;
       canvases.value = result;
     } else if (scope.value === "assets") {

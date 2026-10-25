@@ -4,9 +4,13 @@
 
 本文收录插件开发、源码运行、桌面打包和更新发布的详细说明。首次参与开发，可先阅读贡献指南。
 
+FilmFraylo 使用[上游同步流程](upstreamSync.md)升级 Toonflow；产品身份与能力开关集中在 `packages/product/product.json`，实际升级记录见 [2.0.3 升级说明](upstreamUpgrade.md)。
+
+源码构建使用 Bun 1.4.3，Vite 配置加载还需要 Node.js 22.18+（建议 Node.js 24 LTS）。TypeScript 统一使用 6.0.x，与当前 Vue 类型检查工具匹配。桌面首次构建前显式运行 `bun x electrobun prepare --env=stable` 准备 SDK；`typecheck` 不会自动下载 SDK。
+
 ## 🧩 插件与模型扩展
 
-通过“设置 → 插件市场”发现和管理节点、工具与技能；市场顶部可以直接打开 [网页版市场](https://api.toonflow.net/console/plugIn) 和 [开发者文档](https://qcn7xdsqgc4z.feishu.cn/docx/KNBNd9naqolsy6xjAOCcEAkqnRd)。市场需要 TF-Router API Key，未配置时会提示填写。
+通过设置中的插件管理页面管理已安装的节点、工具、扩展与技能，也可安装本地插件文件；本发行版不开放上游远程插件市场。新增的 MCP 标签用于配置供 Agent 调用的本地或远程 MCP 服务。
 
 | 扩展类型 | 用途 | 开发入口 |
 | --- | --- | --- |
@@ -17,7 +21,7 @@
 
 节点与工具的配置表单统一使用 `@form-create/element-ui` 的规则；有必填项未填写时，配置按钮会显示红点。工具只接收自身配置，宿主不向工具直接传递完整应用设置。
 
-媒体接口包含图片、视频和音频的扩展类型，实际能力由各提供方实现；当前内置 TF-Router 媒体适配提供图片与视频生成。技能既可以全局安装，也可以放在当前工作区的 `skill/` 目录，同名时优先使用工作区版本。
+媒体接口包含图片、视频和音频的扩展类型，实际能力由各提供方实现；当前默认使用 safillu 提供方，支持的模型和参数以 [FilmFraylo 使用说明](filmFraylo.md)为准。技能既可以全局安装，也可以放在当前工作区的 `skill/` 目录，同名时优先使用工作区版本。
 
 需要从外部 Coding 工具操作 FilmFraylo 时，在“设置 → MCP”开启服务并复制客户端配置，支持 HTTP 与 stdio 连接。画布和节点等界面操作需要保持 FilmFraylo 窗口或网页打开，详见 [MCP 接入说明](../packages/mcp/README.md)。
 
@@ -56,7 +60,7 @@ Windows 安装器负责注册协议；macOS 需要将应用放入 `/Applications
 
 | 层级 | 技术 |
 | --- | --- |
-| 运行时与包管理 | Bun 1.3.14、Bun Workspaces |
+| 运行时与包管理 | Bun 1.4.3、Bun Workspaces |
 | 前端 | Vue 3、Vite、TypeScript、Pinia、Element Plus、Vue Flow |
 | 服务端 | Bun、Express 5、Zod |
 | Agent | Pi Agent SDK、工具插件、Markdown 技能与记忆 |
@@ -69,8 +73,8 @@ Windows 安装器负责注册协议；macOS 需要将应用放入 `/Applications
 
 ```sh
 # 获取 FilmFraylo 源码后进入应用目录
-cd filmFraylo-app
-bun install
+cd filmfraylo/source
+bun install --frozen-lockfile --linker hoisted
 
 # 首次开发或修改插件后，构建节点和工具并同步到 data/
 bun run dev:plugins

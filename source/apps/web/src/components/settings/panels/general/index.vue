@@ -9,7 +9,7 @@
         <el-switch
           :modelValue="uiSettings.startupAnimation"
           aria-label="启动动画"
-          @change="(value) => updateUiSettings({ startupAnimation: value === true })" />
+          @change="(value: unknown) => updateUiSettings({ startupAnimation: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="canvasCompositingTitle">
@@ -21,7 +21,7 @@
         <el-switch
           :modelValue="generalSettings.canvasCompositingEnabled"
           aria-label="画布合成优化"
-          @change="(value) => updateGeneralSettings({ canvasCompositingEnabled: value === true })" />
+          @change="(value: unknown) => updateGeneralSettings({ canvasCompositingEnabled: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="canvasEdgeAnimationTitle">
@@ -33,7 +33,7 @@
         <el-switch
           :modelValue="generalSettings.canvasEdgeAnimationEnabled"
           aria-label="节点连线动画"
-          @change="(value) => updateGeneralSettings({ canvasEdgeAnimationEnabled: value === true })" />
+          @change="(value: unknown) => updateGeneralSettings({ canvasEdgeAnimationEnabled: value === true })" />
       </div>
     </section>
     <section class="settingSection" aria-labelledby="canvasEdgeColorTitle">
@@ -46,7 +46,7 @@
           <el-select
             :modelValue="generalSettings.canvasEdgeColorMode"
             aria-label="节点连线颜色模式"
-            @change="(value) => updateGeneralSettings({ canvasEdgeColorMode: value })">
+            @change="(value: string) => updateGeneralSettings({ canvasEdgeColorMode: value })">
             <el-option label="不使用高亮颜色" value="none" />
             <el-option label="跟随主题色" value="theme" />
             <el-option label="自选颜色" value="custom" />
@@ -56,10 +56,11 @@
             :modelValue="generalSettings.canvasEdgeColor"
             colorFormat="hex"
             aria-label="节点连线自选颜色"
-            @change="(value) => updateGeneralSettings({ canvasEdgeColor: value || defaultUiSettings.primaryColor })" />
+            @change="(value: string | null) => updateGeneralSettings({ canvasEdgeColor: value || defaultUiSettings.primaryColor })" />
         </div>
       </div>
     </section>
+    <nodeMenuSettings />
     <canvasShortcuts />
   </div>
 </template>
@@ -67,6 +68,7 @@
 <script setup lang="ts">
 import { defaultUiSettings, generalSettings, uiSettings, updateGeneralSettings, updateUiSettings } from "@/stores/settings";
 import canvasShortcuts from "./canvasShortcuts.vue";
+import nodeMenuSettings from "./nodeMenuSettings.vue";
 </script>
 
 <style lang="scss" scoped>

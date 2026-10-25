@@ -42,7 +42,7 @@ import axios from "axios";
 import { defineAsyncComponent, onMounted, onBeforeUnmount, ref, shallowRef, type Component } from "vue";
 import { ElMessage } from "element-plus";
 import { IconPlus, IconEdit, IconTrash, IconDownload } from "@tabler/icons-vue";
-import logoUrl from "@toonflow/assets/filmFrayloLogo.png";
+import { logoUrl } from "@/lib/product";
 import type { MediaProvider } from "./types";
 import { saveSettings } from "@/stores/settings";
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";

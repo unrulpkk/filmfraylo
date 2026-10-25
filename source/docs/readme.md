@@ -2,7 +2,7 @@
 
 [返回项目首页](../README.md)
 
-## 项目介绍
+## 上游译版参考
 
 | README 语言 | 入口 |
 | --- | --- |
@@ -28,7 +28,7 @@
 | فارسی | [README](./readme/readmeFa.md) |
 | Türkçe | [README](./readme/readmeTr.md) |
 
-项目介绍提供以上 21 种语言版本，与[应用支持的语言](../README.md#languages)保持一致。
+以上译版保留 Toonflow 上游原文，便于跟进功能和协议变化；其中的模型渠道、下载、社区和联系方式不代表 FilmFraylo。FilmFraylo 的安装、safillu 配置和产品支持以[项目首页](../../README.md)及[使用说明](filmFraylo.md)为准。
 
 ## 使用与开发
 
@@ -53,4 +53,4 @@ docs/
     sponsors/        赞助商图片
 ```
 
-各子包的实现与维护说明保留在对应 `packages/` 目录。更新项目介绍时，以根目录 `README.md` 为准同步其余二十份译版；图片统一复用 `images/`，移动文件时同时更新 Markdown 和 HTML 中的相对链接。
+各子包的实现与维护说明保留在对应 `packages/` 目录。FilmFraylo 产品介绍维护在仓库根目录 `README.md`，上游译版随源码同步；图片统一复用 `images/`，移动文件时同时更新 Markdown 和 HTML 中的相对链接。

@@ -16,7 +16,7 @@
           <h3 id="deviceLinkTitle">允许其他设备连接</h3>
           <p class="description">其他电脑、安卓设备可使用这里的项目与配置。连接时请保持 FilmFraylo 运行。</p>
         </div>
-        <el-switch :modelValue="form.enabled" :disabled="busy || !status" aria-label="允许其他设备连接" @change="value => saveConfig(value === true)" />
+        <el-switch :modelValue="form.enabled" :disabled="busy || !status" aria-label="允许其他设备连接" @change="(value: unknown) => saveConfig(value === true)" />
       </div>
     </section>
 
@@ -131,7 +131,8 @@ import { IconFolderPlus, IconQrcode, IconRefresh } from "@tabler/icons-vue";
 import { useWorkspaceStore } from "@/stores/workspace";
 import workspacePicker from "@/pages/home/workspacePicker.vue";
 import { writeClipboardText } from "@/lib/clipboard";
-import { changeDeviceConnection, deviceHubEnabled, getDeviceVersionWarning, isRemoteConnection, mobileConnection, mobileConnectionLabel, mobileConnectionVersionWarning } from "@/lib/mobile";
+import { changeDeviceConnection, deviceHubEnabled, getDeviceVersionWarning, mobileConnection, mobileConnectionLabel, mobileConnectionVersionWarning } from "@/lib/mobile";
+import { isRemoteConnection } from "@/lib/platform";
 
 type LinkStatus = { enabled: boolean; hubEnabled?: boolean; initialized: boolean; pairingAvailable: boolean; port: number; addresses: string[]; publicUrl: string; directories: string[]; appVersion?: string; devices: { id: string; name: string; online: boolean; lastSeen?: number; appVersion?: string }[] };
 type Pairing = { qrCode: string; manualCode: string; url: string };

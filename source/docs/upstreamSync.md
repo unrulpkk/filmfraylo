@@ -79,4 +79,4 @@ git branch -D update/toonflow-<SHA前12位>
 
 已经合入但需要回退时，用 `git revert -m 1 <实际合并提交SHA>` 回退应用变更及同提交内的基线，然后重新验证、发布 FilmFraylo。不要只改基线、直接重置主分支或回退用户数据。
 
-本次补齐的是源码更新能力；初始基线仍为 `2c7fb257`，并不表示已合入上游后续功能。首次更新按上述流程单独审阅与验收。
+FilmFraylo 2.0.3 已实际整合上游 `30139c931e80476caa718b31684b86383c6e83ce`，具体冲突处理、定制边界及验证范围见[升级记录](upstreamUpgrade.md)。`scripts/upstream.json` 始终记录实际已整合的基线。

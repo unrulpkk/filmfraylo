@@ -1,0 +1,16 @@
+{
+  "name": "FilmFraylo",
+  "identifier": "local.filmfraylo.desktop",
+  "repository": "unrulpkk/filmfraylo",
+  "repositoryUrl": "https://github.com/unrulpkk/filmfraylo",
+  "gateway": {
+    "id": "safillu",
+    "baseUrl": "https://api.safillu.com"
+  },
+  "primaryColor": "#a855f7",
+  "supportPhone": "18250803026",
+  "features": {
+    "remoteMarket": false,
+    "telemetry": false
+  }
+}

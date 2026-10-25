@@ -3,7 +3,7 @@
     <section class="settingSection" aria-labelledby="mcpEnabledTitle">
       <div class="settingHeader">
         <h3 id="mcpEnabledTitle">开启 MCP</h3>
-        <el-switch :modelValue="mcpSettings.enabled" :loading="saving" aria-label="开启 MCP" @change="(value) => setEnabled(value === true)" />
+        <el-switch :modelValue="mcpSettings.enabled" :loading="saving" aria-label="开启 MCP" @change="(value: unknown) => setEnabled(value === true)" />
       </div>
       <p class="description">允许外部 Coding 工具和 Agent 操作 FilmFraylo。开启后，将客户端配置添加到对应工具中。</p>
     </section>

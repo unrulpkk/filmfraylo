@@ -17,7 +17,7 @@
         :marks="{ 50: '50%', 75: '75%（默认）', 100: '100%' }"
         showStops
         aria-label="界面缩放"
-        @change="value => typeof value === 'number' && updateUiSettings({ mobileScale: value })" />
+        @change="(value: unknown) => typeof value === 'number' && updateUiSettings({ mobileScale: value })" />
     </section>
 
     <section class="settingSection" aria-labelledby="languageTitle">
@@ -36,7 +36,7 @@
         :modelValue="uiSettings.theme"
         aria-label="外观模式"
         @click="captureThemeClickPoint"
-        @change="(value) => changeTheme(String(value))">
+        @change="(value: unknown) => changeTheme(String(value))">
         <el-radio v-for="item in themes" :key="item.value" :value="item.value" border>
           <span class="themeLabel">
             <component :is="item.icon" :size="22" />
@@ -95,7 +95,7 @@
         :step="5"
         :marks="{ 85: '较小', 100: '默认', 125: '较大' }"
         aria-label="字体大小"
-        @change="(value) => typeof value === 'number' && updateUiSettings({ fontScale: value })" />
+        @change="(value: unknown) => typeof value === 'number' && updateUiSettings({ fontScale: value })" />
     </section>
 
     <section class="settingSection" aria-labelledby="radiusTitle">
@@ -114,7 +114,7 @@
         :step="2"
         :marks="{ 0: '直角', 8: '默认', 16: '圆润' }"
         aria-label="界面圆角"
-        @change="(value) => typeof value === 'number' && updateUiSettings({ radius: value })" />
+        @change="(value: unknown) => typeof value === 'number' && updateUiSettings({ radius: value })" />
     </section>
 
     <el-card class="appearancePreview" shadow="never">
@@ -145,7 +145,7 @@ import {
   IconRestore,
 } from "@tabler/icons-vue";
 import { defaultUiSettings, uiSettings, updateUiSettings } from "@/stores/settings";
-import { isMobile } from "@/lib/mobile";
+import { isMobile } from "@/lib/platform";
 import languageSelect from "@/components/languageSelect.vue";
 
 const mobileScale = ref(uiSettings.value.mobileScale);

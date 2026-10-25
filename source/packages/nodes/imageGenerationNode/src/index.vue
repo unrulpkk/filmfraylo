@@ -11,7 +11,7 @@
     :style="{ width: (previewUrl || inpaintGuideUrl) && imageWidth ? `${imageWidth + 18}px` : undefined }">
     <template v-if="editor?.mode" #top><div ref="paintToolbar" /></template>
     <template #topActions>
-      <el-button :icon="IconPanoramaHorizontal" :disabled="generating || deleting || uploading || editor?.busy || lighting?.generating || multiAngle?.generating || gridSplit?.splitting || panorama?.busy || !previewUrl" text title="全景图" aria-label="全景图" @click.stop="panorama?.open($event)">全景图<icon-chevron-down :size="14" /></el-button>
+      <el-button class="panoramaButton" :icon="IconPanoramaHorizontal" :disabled="generating || deleting || uploading || editor?.busy || lighting?.generating || multiAngle?.generating || gridSplit?.splitting || panorama?.busy || !previewUrl" text title="全景图" aria-label="全景图" @click.stop="panorama?.open($event)">全景图<icon-chevron-down class="menuChevron" :size="14" /></el-button>
       <el-button :icon="IconBrush" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="局部重绘" aria-label="局部重绘" @click.stop="startEditor('inpaint')">局部重绘</el-button>
       <el-button :icon="IconSun" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="打光" aria-label="打光" @click.stop="openLighting">打光</el-button>
       <el-button :icon="IconCameraRotate" :disabled="generating || deleting || uploading || lighting?.generating || multiAngle?.generating || panorama?.busy || !previewUrl || gridSplit?.splitting" text title="多角度" aria-label="多角度" @click.stop="openMultiAngle">多角度</el-button>
@@ -83,14 +83,16 @@
             :ratios="ratioOptions"
             :disabled="generating || deleting || !selectedModel" />
           <el-button v-if="editor?.mode === 'inpaint'" class="confirmButton" type="primary" :icon="IconCheck" :loading="editor.busy" :disabled="deleting || uploading || !generationPrompt" @click="confirmInpaint().catch(error => showNodeError(error, '重绘节点创建失败'))">确认</el-button>
-          <el-button
-            v-else
-            class="sendButton"
-            :icon="generating ? IconPlayerStop : IconArrowUp"
-            :disabled="deleting || uploading || (!generating && (editor?.busy || !generationPrompt || !selectedModel))"
-            :title="generating ? '停止生成' : '生成图片'"
-            :aria-label="generating ? '停止生成' : '生成图片'"
-            @click="generating ? generationController?.abort() : startGeneration().catch((error) => showNodeError(error, '图片生成失败'))" />
+          <div v-else class="generationActions">
+            <mediaPrice v-if="priceInput" :input="{ ...priceInput, mediaType: 'image' }" :supported="selectedModel?.supportsPrice === true" />
+            <el-button
+              class="sendButton"
+              :icon="generating ? IconPlayerStop : IconArrowUp"
+              :disabled="deleting || uploading || (!generating && (editor?.busy || !generationPrompt || !selectedModel))"
+              :title="generating ? '停止生成' : '生成图片'"
+              :aria-label="generating ? '停止生成' : '生成图片'"
+              @click="generating ? generationController?.abort() : startGeneration().catch((error) => showNodeError(error, '图片生成失败'))" />
+          </div>
         </div>
       </el-card>
     </template>
@@ -111,7 +113,7 @@
 import { computed, nextTick, onMounted, onScopeDispose, ref, watch } from "vue";
 import { ElButton, ElCard, ElSelect, ElOption, ElOptionGroup, ElLoading, ElImageViewer } from "element-plus";
 import { IconCheck, IconPhotoAi, IconSparkles, IconArrowUp, IconPlayerStop, IconTransfer, IconLayoutGrid, IconBrush, IconPencil, IconSun, IconCameraRotate, IconPanoramaHorizontal, IconChevronDown } from "@tabler/icons-vue";
-import { nodeSkeleton, nodeTools, useNode, z, type NodeMediaModel, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
+import { nodeSkeleton, nodeTools, useNode, z, type NodeMediaModel, type NodeImageRequest, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { useNodeGeneration } from "@toonflow/node-shared/useNodeGeneration";
@@ -119,9 +121,10 @@ import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
 import promptInput from "@toonflow/node-shared/promptInput";
 import referenceItem from "@toonflow/node-shared/referenceItem";
 import mediaHistory from "@toonflow/node-shared/mediaHistory";
+import mediaPrice from "@toonflow/node-shared/mediaPrice";
 import imageGridSplit from "@toonflow/node-image/imageGridSplit";
 import imageEditor from "@toonflow/node-image/imageEditor";
-import { useImageInpaint, type ImageInpaint } from "@toonflow/node-image/imageInpaint";
+import { buildInpaintRequest, useImageInpaint, type ImageInpaint } from "@toonflow/node-image/imageInpaint";
 import imageLighting from "@toonflow/node-image/imageLighting";
 import imagePanorama from "@toonflow/node-image/imagePanorama";
 import imageMultiAngle from "@toonflow/node-image/imageMultiAngle";
@@ -198,6 +201,34 @@ const generationPrompt = computed(() =>
     .filter(Boolean)
     .join("\n\n")
 );
+const generationInput = computed<Omit<NodeImageRequest, "directory"> | undefined>(() => {
+  const choice = selectedModel.value;
+  if (!choice) return;
+  const inpaint = data.value.inpaint;
+  const references = refList.value.filter(item => !inpaint || item.dataType !== "IMAGE" || item.value?.url !== inpaint.source);
+  const input = {
+    providerId: choice.providerId,
+    modelId: choice.modelId,
+    prompt: generationPrompt.value,
+    size: data.value.size,
+    ratio: data.value.ratio,
+    outputDirectory: `assets/${id}`,
+    images: references.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
+  };
+  if (inpaint) {
+    let imageIndex = 3 + (inpaint.images?.length ?? 0);
+    const mapping = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value
+      ? [`参考 ${index + 1} / {{ref ${index + 1}}} 对应第 ${item.value.url === inpaint.source ? 1 : imageIndex++} 张图`] : []);
+    if (mapping.length) input.prompt += `\n当前节点参考编号对应关系：${mapping.join("；")}。`;
+  }
+  return input;
+});
+const priceInput = computed(() => {
+  const input = generationInput.value;
+  const inpaint = data.value.inpaint;
+  if (!input || inpaint && !Array.isArray(inpaint.images)) return;
+  return inpaint ? buildInpaintRequest(input, inpaint) : input;
+});
 const outputFile = computed(() => outputs.value.image?.dataType === "IMAGE" ? outputs.value.image.value : undefined);
 const inpaintGuideUrl = files.useFileUrl(
   () => data.value.inpaint?.guide ? { url: data.value.inpaint.guide, mimeType: "image/png" } : undefined,
@@ -208,11 +239,27 @@ const previewUrl = files.useFileUrl(
   (error) => showNodeError(error, "图片读取失败")
 );
 
-onMounted(() => loadModels().catch((error) => showNodeError(error, "模型读取失败")));
+onMounted(() => {
+  window.addEventListener("toonflow:plugin-installed", refreshProviderModels);
+  window.addEventListener("toonflow:provider-config-changed", refreshProviderModels);
+  void loadModels().catch(error => { if (!disposed) showNodeError(error, "模型读取失败"); });
+});
 onScopeDispose(() => {
   disposed = true;
+  window.removeEventListener("toonflow:plugin-installed", refreshProviderModels);
+  window.removeEventListener("toonflow:provider-config-changed", refreshProviderModels);
   generationController?.abort();
 });
+
+async function refreshProviderModels(event: Event) {
+  if (event.type === "toonflow:plugin-installed" && (event as CustomEvent<{ type?: string }>).detail?.type !== "provider") return;
+  try {
+    await generation;
+    if (!disposed && !deleting.value) await loadModels();
+  } catch (error) {
+    if (!disposed) showNodeError(error, "模型读取失败");
+  }
+}
 
 async function replaceOutput(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -242,7 +289,7 @@ function loadModels() {
   if (modelsRequest) return modelsRequest;
   modelsLoading.value = true;
   modelsRequest = ai.getMediaModels().then((items) => {
-    if (generating.value || deleting.value) return;
+    if (disposed || generating.value || deleting.value) return;
     models.value = items.filter((item) => item.type === "image");
     // ACT: 只给空配置选默认模型，保留暂时不可用的旧选择及其参数。
     if (!data.value.model) {
@@ -270,7 +317,7 @@ async function confirmInpaint() {
 }
 
 async function startGeneration() {
-  const choice = selectedModel.value;
+  const input = generationInput.value;
   if (generating.value) throw new Error("图片正在生成，请等待完成");
   if (panorama.value?.visible) throw new Error("请先关闭全景图，再启动图片生成");
   if (uploading.value) throw new Error("图片正在替换，请等待完成");
@@ -282,25 +329,10 @@ async function startGeneration() {
   if (!generationPrompt.value) throw new Error("请输入生成提示词");
   const references = refList.value.filter(item => !data.value.inpaint || item.dataType !== "IMAGE" || item.value?.url !== data.value.inpaint.source);
   if (references.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
-  if (!choice) throw new Error("请先选择图片模型");
+  if (!input) throw new Error("请先选择图片模型");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   const inpaintData = data.value.inpaint;
-  const input = {
-    providerId: choice.providerId,
-    modelId: choice.modelId,
-    prompt: generationPrompt.value,
-    size: data.value.size,
-    ratio: data.value.ratio,
-    outputDirectory: `assets/${id}`,
-    images: references.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
-  };
-  if (inpaintData) {
-    let imageIndex = 3 + (inpaintData.images?.length ?? 0);
-    const mapping = refList.value.flatMap((item, index) => item.dataType === "IMAGE" && item.value
-      ? [`参考 ${index + 1} / {{ref ${index + 1}}} 对应第 ${item.value.url === inpaintData.source ? 1 : imageIndex++} 张图`] : []);
-    if (mapping.length) input.prompt += `\n当前节点参考编号对应关系：${mapping.join("；")}。`;
-  }
   generationController = controller;
   // ACT: 工具立即返回，任务由节点持有，停止或卸载时取消。
   generation = generationState.run(() => workspace.list()
@@ -449,6 +481,10 @@ nodeTools.register({
 </script>
 
 <style scoped lang="scss">
+.panoramaButton {
+  &[aria-expanded="true"] .menuChevron { transform: rotate(180deg); }
+}
+
 .imageContent {
   position: relative;
   display: grid;
@@ -499,17 +535,24 @@ nodeTools.register({
 
     .confirmButton { margin-left: auto; }
 
-    .sendButton {
-      width: 32px;
-      height: 32px;
+    .generationActions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin-left: auto;
-      padding: 0;
-      --el-button-bg-color: var(--el-text-color-primary);
-      --el-button-border-color: transparent;
-      --el-button-text-color: var(--el-bg-color);
-      --el-button-hover-bg-color: var(--el-text-color-regular);
-      --el-button-hover-border-color: transparent;
-      --el-button-hover-text-color: var(--el-bg-color);
+
+      .sendButton {
+        width: 32px;
+        height: 32px;
+        margin-left: 0;
+        padding: 0;
+        --el-button-bg-color: var(--el-text-color-primary);
+        --el-button-border-color: transparent;
+        --el-button-text-color: var(--el-bg-color);
+        --el-button-hover-bg-color: var(--el-text-color-regular);
+        --el-button-hover-border-color: transparent;
+        --el-button-hover-text-color: var(--el-bg-color);
+      }
     }
   }
 }

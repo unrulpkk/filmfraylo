@@ -1,10 +1,10 @@
 <template>
-  <el-popover trigger="click" placement="top-start" width="min(380px, calc(100vw - 24px))" :disabled="disabled" :showArrow="false" :popperStyle="{ padding: '16px' }">
+  <el-popover v-model:visible="settingsVisible" trigger="click" placement="top-start" width="min(380px, calc(100vw - 24px))" :disabled="disabled" :showArrow="false" :popperStyle="{ padding: '16px' }">
     <template #reference>
-      <el-button class="settingsButton" text size="small" :disabled="disabled" aria-label="音频生成设置">
+      <el-button class="settingsButton" text size="small" :disabled="disabled" :aria-expanded="settingsVisible" aria-label="音频生成设置">
         <icon-adjustments-horizontal :size="15" aria-hidden="true" />
         <span>{{ languageLabel }} · {{ sampleRate / 1000 }}k · {{ format }}</span>
-        <icon-chevron-up :size="14" aria-hidden="true" />
+        <component :is="settingsVisible ? IconChevronDown : IconChevronUp" :size="14" aria-hidden="true" />
       </el-button>
     </template>
     <div class="generationSettings nodrag nopan nowheel" @pointerdown.stop @mousedown.stop @dblclick.stop @keydown.stop @wheel.stop>
@@ -32,12 +32,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { ElButton, ElPopover, ElSegmented } from "element-plus";
-import { IconAdjustmentsHorizontal, IconChevronUp } from "@tabler/icons-vue";
+import { IconAdjustmentsHorizontal, IconChevronDown, IconChevronUp } from "@tabler/icons-vue";
 import { languageOptions, sampleRateOptions, formatOptions } from "../audioSettings";
 
 defineProps<{ disabled?: boolean }>();
+const settingsVisible = ref(false);
 const language = defineModel<string>("language", { required: true });
 const sampleRate = defineModel<number>("sampleRate", { required: true });
 const format = defineModel<string>("format", { required: true });

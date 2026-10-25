@@ -7,6 +7,8 @@ import { createAssetDirectory, getAssetsDirectory, importAssetFile, moveAsset, r
 import { lockWorkspaceFiles, protectWorkspaceRoot, resolveWorkspacePath } from "@/utils/workspace/files";
 import { queryMentionAssets } from "./mentionFiles";
 import { mentionAssetType } from "./mentionSources";
+import { getDocumentMimeType } from "@/lib/documentFormats";
+import { readDocument } from "@/utils/documents";
 
 async function readWorkspaceSource(cwd: string, path: string, signal?: AbortSignal) {
   const directory = await realpath(cwd);
@@ -36,9 +38,11 @@ export function createAssetContext(cwd: string): NonNullable<ToolContext["assets
       } else if (action === "read") {
         const file = await readAssetFile(path!, signal);
         const { mimeType, dataType } = mentionAssetType(file.path);
-        const details = { path: file.path, revision: file.revision, mimeType, size: file.content.byteLength };
+        const isDocument = !!getDocumentMimeType(file.path, mimeType);
+        const details = { path: file.path, revision: file.revision, mimeType, size: file.content.byteLength,
+          ...(isDocument ? { contentType: "text/markdown" } : {}) };
         const isImage = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"].includes(mimeType);
-        if (dataType !== "STRING" && !isImage) {
+        if (dataType !== "STRING" && !isImage && !isDocument) {
           return { content: [{ type: "text", text: `${JSON.stringify(details)}\n此格式不直接展示内容；使用 import 复制到工作区后预览或交给相应节点。` }], details };
         }
         const root = await getAssetsDirectory();
@@ -49,7 +53,7 @@ export function createAssetContext(cwd: string): NonNullable<ToolContext["assets
         };
         const reader = createReadToolDefinition(root, { operations: {
           access: async candidate => { allowSnapshot(candidate); },
-          readFile: async candidate => { allowSnapshot(candidate); return file.content; },
+          readFile: async candidate => { allowSnapshot(candidate); return readDocument(file.path, file.content, mimeType); },
           detectImageMimeType: async candidate => { allowSnapshot(candidate); return isImage ? mimeType : null; },
         } });
         const read = await reader.execute(id, { path: absolutePath, offset: request.offset, limit: request.limit }, signal, onUpdate, executionContext);

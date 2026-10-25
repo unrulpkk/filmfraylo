@@ -1,15 +1,15 @@
 <template>
   <div class="about">
     <div class="brand">
-      <img class="brandLogo" :src="logoUrl" alt="FilmFraylo Logo" />
+      <img class="brandLogo" :src="logoUrl" :alt="`${product.name} Logo`" />
       <div>
-        <h3>FilmFraylo</h3>
+        <h3>{{ product.name }}</h3>
         <p v-if="version" class="version" @click="onVersionClick">v{{ version }}</p>
       </div>
     </div>
     <div class="support">
       <h4>技术支持</h4>
-      <p class="phone">18250803026</p>
+      <p class="phone">{{ product.supportPhone }}</p>
       <img class="wechatQr" :src="wechatQrUrl" alt="微信技术支持二维码" />
       <p class="hint">微信扫码联系技术支持</p>
     </div>
@@ -17,10 +17,11 @@
 </template>
 
 <script setup lang="ts">
+import { product } from "@/lib/product";
 import { inject } from "vue";
 import { ElMessage } from "element-plus";
-import logoUrl from "@toonflow/assets/filmFrayloLogo.png";
-import wechatQrUrl from "@toonflow/assets/wechatSupportQr.png";
+import { logoUrl } from "@/lib/product";
+import { wechatQrUrl } from "@/lib/product";
 const version = import.meta.env.appVersion;
 
 const revealDeveloper = inject<(() => void) | undefined>("revealDeveloper", undefined);

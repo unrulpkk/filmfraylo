@@ -10,6 +10,8 @@
     :fullscreenVisible="false"
     style="width: 360px">
     <template #topActions>
+      <el-button :icon="IconTextRecognition" :loading="transcribing" :disabled="busy || !outputFile" text title="音频转文本" aria-label="音频转文本" @click.stop="transcribe">转文本</el-button>
+      <el-button v-if="transcribing" :icon="IconPlayerStop" text title="取消转文本" aria-label="取消转文本" @click.stop="cancelTranscription">取消</el-button>
       <el-button :icon="IconScissors" :disabled="busy || !previewUrl" text title="截取音频" aria-label="截取音频" @click.stop="actions?.open('clip')">截取</el-button>
       <el-button :icon="IconGauge" :disabled="busy || !previewUrl" text title="音频变速" aria-label="音频变速" @click.stop="actions?.open('speed')">变速</el-button>
       <el-button :icon="IconTransfer" :loading="uploading" :disabled="busy" text title="替换音频" aria-label="替换音频" @click.stop="fileInput?.click()">替换音频</el-button>
@@ -52,33 +54,39 @@
             </el-option-group>
           </el-select>
           <generationSettings v-if="!isSafilluAudio" v-model:language="data.language" v-model:sampleRate="data.sampleRate" v-model:format="data.format" :disabled="busy || !selectedModel" />
-          <el-button
-            class="sendButton"
-            :icon="generating ? IconPlayerStop : IconArrowUp"
-            :disabled="deleting || uploading || actions?.processing || (!generating && (!generationPrompt || !selectedModel))"
-            :title="generating ? '停止生成' : '生成音频'"
-            :aria-label="generating ? '停止生成' : '生成音频'"
-            @click="generating ? generationController?.abort() : startGeneration().catch(error => showNodeError(error, '音频生成失败'))" />
+          <div class="generationActions">
+            <mediaPrice v-if="generationInput" :input="{ ...generationInput, mediaType: 'audio' }" :supported="selectedModel?.supportsPrice === true" />
+            <el-button
+              class="sendButton"
+              :icon="generating ? IconPlayerStop : IconArrowUp"
+              :disabled="deleting || uploading || transcribing || actions?.processing || (!generating && (!generationPrompt || !selectedModel))"
+              :title="generating ? '停止生成' : '生成音频'"
+              :aria-label="generating ? '停止生成' : '生成音频'"
+              @click="generating ? generationController?.abort() : startGeneration().catch(error => showNodeError(error, '音频生成失败'))" />
+          </div>
         </div>
       </el-card>
     </template>
   </nodeSkeleton>
-  <audioActions ref="actions" :file="outputFile" :src="previewUrl" :target="speedTarget" :disabled="generating || deleting || uploading" @pause="player?.pause()" />
+  <audioActions ref="actions" :file="outputFile" :src="previewUrl" :target="speedTarget" :disabled="generating || deleting || uploading || transcribing" @pause="player?.pause()" />
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onScopeDispose, ref } from "vue";
+import { safilluAudioMode, safilluAudioParameters } from "./safilluAudio";
+import { computed, onMounted, onScopeDispose, ref, watch } from "vue";
 import { ElButton, ElCard, ElInput, ElInputNumber, ElLoading, ElOption, ElOptionGroup, ElSelect } from "element-plus";
-import { IconArrowUp, IconGauge, IconMusicBolt, IconPlayerStop, IconScissors, IconTransfer } from "@tabler/icons-vue";
+import { IconArrowUp, IconGauge, IconMusicBolt, IconPlayerStop, IconScissors, IconTransfer, IconTextRecognition } from "@tabler/icons-vue";
 import { getTargetValues, isTypeCompatible, nodeSkeleton, nodeTools, useNode, z, type NodeAudioRequest, type NodeHandle, type NodeInputValue, type NodeMediaModel } from "@toonflow/nodes-scaffold/runtime";
 import { groupNodeModels } from "@toonflow/node-shared/groupNodeModels";
 import { showNodeError } from "@toonflow/node-shared/showNodeError";
 import { useNodeGeneration } from "@toonflow/node-shared/useNodeGeneration";
+import { useAudioTranscription } from "@toonflow/node-shared/useAudioTranscription";
 import { useNodeReferences } from "@toonflow/node-shared/useNodeReferences";
 import audioPlayer from "@toonflow/node-audio/audioPlayer";
 import audioActions from "@toonflow/node-audio/audioActions";
 import promptInput from "@toonflow/node-shared/promptInput";
 import referenceItem from "@toonflow/node-shared/referenceItem";
+import mediaPrice from "@toonflow/node-shared/mediaPrice";
 import generationSettings from "./components/generationSettings.vue";
 import { formatOptions, languageOptions, sampleRateOptions } from "./audioSettings";
 
@@ -112,17 +120,22 @@ const fileInput = ref<HTMLInputElement>();
 const player = ref<InstanceType<typeof audioPlayer>>();
 const actions = ref<InstanceType<typeof audioActions>>();
 const speedTarget = ref<HTMLElement>();
+const outputFile = computed(() => outputs.value.audio?.dataType === "AUDIO" ? outputs.value.audio.value : undefined);
+const { processing: transcribing, transcribe, cancel: cancelTranscription, cancelAndWait: cancelTranscriptionAndWait } = useAudioTranscription(outputFile);
 let disposed = false;
 let generationController: AbortController | undefined;
 let generation: Promise<void> | undefined;
 let modelsRequest: Promise<void> | undefined;
+let modelsRefreshPending = false;
 const generationState = useNodeGeneration(outputs, () => generationController?.abort());
 const { generating } = generationState;
-const busy = computed(() => generating.value || uploading.value || deleting.value || !!actions.value?.processing);
+const busy = computed(() => generating.value || uploading.value || deleting.value || transcribing.value || !!actions.value?.processing);
+watch(busy, value => { if (!value && modelsRefreshPending) void refreshProviderModels(); });
 const selectedModel = computed(() => models.value.find(item => JSON.stringify([item.providerId, item.modelId]) === data.value.model));
 const modelGroups = computed(() => groupNodeModels(models.value));
-const isVoiceDesign = computed(() => selectedModel.value?.providerId === "safillu" && selectedModel.value.modelId === "Qwen3-TTS-VoiceDesign");
-const isBgm = computed(() => selectedModel.value?.providerId === "safillu" && selectedModel.value.modelId === "YuE2-BGM");
+const audioMode = computed(() => safilluAudioMode(selectedModel.value));
+const isVoiceDesign = computed(() => audioMode.value === "voiceDesign");
+const isBgm = computed(() => audioMode.value === "bgm");
 const isSafilluAudio = computed(() => isVoiceDesign.value || isBgm.value);
 const generationPrompt = computed(() => {
   const used = new Set<number>();
@@ -137,7 +150,19 @@ const generationPrompt = computed(() => {
     item.dataType === "STRING" && item.value?.trim() && !used.has(index)
       ? [isSafilluAudio.value ? item.value.trim() : `参考 ${index + 1}：\n${item.value.trim()}`] : [])].filter(Boolean).join("\n\n");
 });
-const outputFile = computed(() => outputs.value.audio?.dataType === "AUDIO" ? outputs.value.audio.value : undefined);
+const generationInput = computed<Omit<NodeAudioRequest, "directory"> | undefined>(() => {
+  const choice = selectedModel.value;
+  if (!choice) return;
+  return {
+    providerId: choice.providerId,
+    modelId: choice.modelId,
+    prompt: generationPrompt.value,
+    ...safilluAudioParameters(audioMode.value, data.value),
+    outputDirectory: `assets/${id}`,
+    images: refList.value.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
+    audios: refList.value.flatMap(item => item.dataType === "AUDIO" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
+  };
+});
 const previewUrl = files.useFileUrl(outputFile, error => showNodeError(error, "音频读取失败"));
 
 function referencesAllowed(values: NodeInputValue[]) {
@@ -151,17 +176,41 @@ nodeEvent.on("canConnect", (connection, context) => {
   return referencesAllowed(getTargetValues(id, "in", context.nodes, [...edges, connection]));
 });
 
-onMounted(() => loadModels().catch(error => showNodeError(error, "模型读取失败")));
+onMounted(() => {
+  window.addEventListener("toonflow:plugin-installed", refreshProviderModels);
+  window.addEventListener("toonflow:provider-config-changed", refreshProviderModels);
+  void refreshProviderModels();
+});
 onScopeDispose(() => {
   disposed = true;
+  window.removeEventListener("toonflow:plugin-installed", refreshProviderModels);
+  window.removeEventListener("toonflow:provider-config-changed", refreshProviderModels);
   generationController?.abort();
 });
+
+async function refreshProviderModels(event?: Event) {
+  if (event?.type === "toonflow:plugin-installed" && (event as CustomEvent<{ type?: string }>).detail?.type !== "provider") return;
+  modelsRefreshPending = true;
+  if (disposed || busy.value) return;
+  try {
+    await modelsRequest;
+    if (disposed || busy.value) return;
+    modelsRefreshPending = false;
+    await loadModels();
+  } catch (error) {
+    if (!disposed) showNodeError(error, "模型读取失败");
+  }
+}
 
 function loadModels() {
   if (modelsRequest) return modelsRequest;
   modelsLoading.value = true;
   modelsRequest = ai.getMediaModels().then(items => {
-    if (disposed || busy.value) return;
+    if (disposed) return;
+    if (busy.value) {
+      modelsRefreshPending = true;
+      return;
+    }
     models.value = items.filter(item => item.type === "audio");
     // ACT: 仅空配置选择默认模型，临时不可用的模型保持原选择，避免静默换供应商。
     if (!data.value.model) {
@@ -177,8 +226,8 @@ function loadModels() {
 
 async function startGeneration() {
   if (busy.value || disposed) throw new Error("音频正在处理或节点已关闭，请稍后重试");
-  const choice = selectedModel.value;
-  if (!choice) throw new Error("请先选择音频模型");
+  const input = generationInput.value;
+  if (!input) throw new Error("请先选择音频模型");
   if (!generationPrompt.value) throw new Error("请输入生成提示词或待朗读文本");
   if (isVoiceDesign.value && !data.value.voicePrompt.trim()) throw new Error("请填写音色描述");
   if (isSafilluAudio.value && refList.value.some(item => item.dataType !== "STRING")) throw new Error("音色设计和 BGM 仅支持文本输入，请移除图片或音频引用");
@@ -187,17 +236,6 @@ async function startGeneration() {
   if (!isSafilluAudio.value && (!languageOptions.some(item => item.value === data.value.language) || !sampleRateOptions.includes(data.value.sampleRate) || !formatOptions.includes(data.value.format))) throw new Error("请重新选择有效的语种、采样率和输出格式");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
-  const input: Omit<NodeAudioRequest, "directory"> = {
-    providerId: choice.providerId,
-    modelId: choice.modelId,
-    prompt: generationPrompt.value,
-    ...(isSafilluAudio.value ? isVoiceDesign.value ? { voicePrompt: data.value.voicePrompt, speed: data.value.speed } : { duration: data.value.duration } : {
-      language: data.value.language, sampleRate: data.value.sampleRate, format: data.value.format,
-    }),
-    outputDirectory: `assets/${id}`,
-    images: refList.value.flatMap(item => item.dataType === "IMAGE" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
-    audios: refList.value.flatMap(item => item.dataType === "AUDIO" && item.value ? [{ path: item.value.url, mimeType: item.value.mimeType }] : []),
-  };
   generationController = controller;
   generation = generationState.run(async () => {
     const { directory } = await workspace.list();
@@ -244,7 +282,7 @@ nodeEvent.on("delete", async () => {
   deleting.value = true;
   generationController?.abort();
   try {
-    await Promise.all([generation, actions.value?.cancelAndWait()]);
+    await Promise.all([generation, actions.value?.cancelAndWait(), cancelTranscriptionAndWait()]);
     await files.removeNodeFiles();
   } finally {
     deleting.value = false;
@@ -361,17 +399,24 @@ nodeTools.register({
       min-width: 0;
       &:deep(.el-select__wrapper) { gap: 6px; padding: 0; box-shadow: none; background: transparent; }
     }
-    .sendButton {
-      width: 32px;
-      height: 32px;
+    .generationActions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin-left: auto;
-      padding: 0;
-      --el-button-bg-color: var(--el-text-color-primary);
-      --el-button-border-color: transparent;
-      --el-button-text-color: var(--el-bg-color);
-      --el-button-hover-bg-color: var(--el-text-color-regular);
-      --el-button-hover-border-color: transparent;
-      --el-button-hover-text-color: var(--el-bg-color);
+
+      .sendButton {
+        width: 32px;
+        height: 32px;
+        margin-left: 0;
+        padding: 0;
+        --el-button-bg-color: var(--el-text-color-primary);
+        --el-button-border-color: transparent;
+        --el-button-text-color: var(--el-bg-color);
+        --el-button-hover-bg-color: var(--el-text-color-regular);
+        --el-button-hover-border-color: transparent;
+        --el-button-hover-text-color: var(--el-bg-color);
+      }
     }
   }
 }

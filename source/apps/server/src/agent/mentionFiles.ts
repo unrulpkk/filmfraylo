@@ -4,6 +4,7 @@ import u from "@/utils";
 import { createCanvasMention, mentionAssetType, mentionNodeOutputs, mentionRecord, queryMentionNodes,
   type MentionCanvasNode, type MentionQuery } from "./mentionSources";
 import type { AgentMention } from "./runtime/types";
+import { decodeTextFile } from "@/lib/documentFormats";
 export { queryAssets as queryMentionAssets } from "@/utils/assets";
 
 type StoredCanvas = { revision: string; nodes: MentionCanvasNode[]; byId: Map<string, MentionCanvasNode> };
@@ -13,7 +14,9 @@ async function readMentionText(directory: string, relativePath: string) {
   const { path } = await u.workspaceFile.resolveWorkspacePath(directory, relativePath);
   const info = await stat(path);
   if (!info.isFile() || info.size > 400000) throw Object.assign(new Error("文本引用最多支持 100000 个字符，请缩小内容后重试"), { status: 400 });
-  const text = await readFile(path, "utf8");
+  const bytes = await readFile(path);
+  if (bytes.byteLength > 400000) throw Object.assign(new Error("文本引用最多支持 100000 个字符，请缩小内容后重试"), { status: 400 });
+  const text = decodeTextFile(bytes);
   if (text.length > 100000) throw Object.assign(new Error("文本引用最多支持 100000 个字符，请缩小内容后重试"), { status: 400 });
   return text;
 }

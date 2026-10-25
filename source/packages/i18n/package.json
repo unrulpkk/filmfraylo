@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "intl-messageformat": "^10.7.16"
+    "intl-messageformat": "^10.7.16",
+    "@toonflow/product": "workspace:*"
   },
   "peerDependencies": {
     "vue": "^3.5.42"

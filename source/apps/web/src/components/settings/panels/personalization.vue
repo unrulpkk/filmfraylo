@@ -51,7 +51,7 @@
             :modelValue="memoryEnabled"
             :loading="savingMemorySetting"
             aria-label="启用本地记忆"
-            @change="(value) => setMemoryEnabled(value === true)" />
+            @change="(value: unknown) => setMemoryEnabled(value === true)" />
         </div>
         <div class="settingHeader">
           <div class="settingInfo">

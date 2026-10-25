@@ -1,14 +1,14 @@
 <template>
   <mini-map
     v-if="showMap"
+    class="canvasMiniMap"
     position="bottom-left"
-    :style="{ bottom: '64px' }"
     :pannable="true"
     :zoomable="true"
     node-color="var(--el-fill-color-dark)"
     mask-color="var(--el-mask-color-extra-light)" />
-  <panel position="bottom-left">
-    <elCard shadow="never" :body-style="{ padding: '4px' }">
+  <panel class="canvasControlsPanel" position="bottom-left">
+    <el-card class="canvasControlsCard" shadow="never" :bodyStyle="{ padding: '2px 4px' }">
       <div class="canvasControls">
         <el-tooltip :showArrow="false" :content="assetsVisible ? '关闭素材库' : '打开素材库'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
           <el-button
@@ -18,7 +18,7 @@
             :aria-pressed="assetsVisible"
             aria-label="素材库"
             @click="assetsVisible = !assetsVisible">
-            <icon-folders :size="17" />
+            <icon-folders :size="18" />
           </el-button>
         </el-tooltip>
         <!-- trigger 用 contextmenu 是为了让整理按钮只由 arrangeNodes 控制显隐，同时仍保留点击外部自动关闭 -->
@@ -27,7 +27,7 @@
             <el-popover trigger="contextmenu" placement="top-start" :width="180" v-model:visible="undoPopoverVisible">
               <template #reference>
                 <el-button class="toolButton" text :disabled="!canArrange" aria-label="整理画布" @click="arrangeNodes">
-                  <icon-sitemap :size="17" />
+                  <icon-sitemap :size="18" />
                 </el-button>
               </template>
               <div class="zoomMenu">
@@ -44,7 +44,7 @@
             :aria-pressed="showMap"
             aria-label="显示或隐藏地图"
             @click="showMap = !showMap">
-            <icon-map :size="17" />
+            <icon-map :size="18" />
           </el-button>
         </el-tooltip>
         <el-tooltip :showArrow="false" :content="snapEnabled ? '关闭网格吸附' : '开启网格吸附'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
@@ -55,7 +55,7 @@
             :aria-pressed="snapEnabled"
             aria-label="网格吸附"
             @click="snapEnabled = !snapEnabled">
-            <icon-magnet :size="17" />
+            <icon-magnet :size="18" />
           </el-button>
         </el-tooltip>
         <el-tooltip :showArrow="false" :content="showEdges ? '隐藏连线' : '显示连线'" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
@@ -66,12 +66,12 @@
             :aria-pressed="showEdges"
             aria-label="显示或隐藏连线"
             @click="showEdges = !showEdges">
-            <icon-arrow-guide :size="17" />
+            <icon-arrow-guide :size="18" />
           </el-button>
         </el-tooltip>
         <el-tooltip :showArrow="false" content="适应视图" placement="top" :hideAfter="0" :enterable="false" :triggerKeys="[]">
           <el-button class="toolButton" text aria-label="适应视图" @click="fitView()">
-            <icon-focus-centered :size="17" />
+            <icon-focus-centered :size="18" />
           </el-button>
         </el-tooltip>
         <el-tooltip :showArrow="false"
@@ -111,7 +111,7 @@
           </span>
         </el-tooltip>
       </div>
-    </elCard>
+    </el-card>
   </panel>
 </template>
 
@@ -207,21 +207,32 @@ async function undoArrange() {
 </script>
 
 <style lang="scss" scoped>
+.canvasMiniMap.vue-flow__minimap { bottom: 46px; }
+
+@container canvasWorkspace (max-width: 1040px) {
+  .canvasControlsPanel.vue-flow__panel { bottom: 46px; }
+  .canvasMiniMap.vue-flow__minimap { bottom: 92px; }
+}
+
+.canvasControlsCard { height: 34px; box-sizing: border-box; }
+
 .canvasControls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
 
   .toolTrigger {
     display: inline-flex;
   }
 
   .toolButton {
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
     margin-left: 0;
     padding: 0;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -236,31 +247,6 @@ async function undoArrange() {
   .zoomAction {
     justify-content: flex-start;
     margin-left: 0;
-  }
-}
-
-.helpMenu {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  .helpAction {
-    justify-content: flex-start;
-    margin-left: 0;
-  }
-}
-
-.contactContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-
-  .contactTip {
-    margin: 0;
-    color: var(--el-text-color-secondary);
-    font-size: 12px;
-    line-height: 1.7;
   }
 }
 </style>

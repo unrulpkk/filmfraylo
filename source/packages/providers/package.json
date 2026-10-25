@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@toonflow/ffmpeg": "workspace:*"
+    "@toonflow/ffmpeg": "workspace:*",
+    "@toonflow/product": "workspace:*"
   },
   "exports": {
     "./language/safillu": "./src/language/safillu.ts",

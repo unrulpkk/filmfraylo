@@ -16,7 +16,7 @@
             <messageMarkdown v-else-if="!message.parts?.length && message.content" :content="message.content" :streaming="!!message.streaming" :directory="sessionDirectory" />
             <template v-for="part in message.parts" :key="part.id">
               <details v-if="part.type === 'thinking' && part.content" class="thinkingContent">
-                <summary>思考<span v-if="part.duration !== undefined"> · {{ part.duration.toFixed(1) }} 秒</span></summary>
+                <summary><icon-chevron-right class="thinkingChevron" :size="14" aria-hidden="true" />思考<span v-if="part.duration !== undefined"> · {{ part.duration.toFixed(1) }} 秒</span></summary>
                 <messageMarkdown :content="part.content" :streaming="!!message.streaming" :directory="sessionDirectory" />
               </details>
               <slot v-else-if="part.type === 'tool'" name="tool" :tool="part.tool" :sessionId="sessionId" :status="status" :pause="pause" :resume="resume">
@@ -68,8 +68,9 @@ import axios from "axios";
 import { translate } from "@toonflow/i18n/vue";
 import { computed, nextTick, onBeforeUnmount, reactive, ref, useSlots, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { IconArrowUp, IconPlayerPause, IconPlayerPlay, IconPlayerStopFilled } from "@tabler/icons-vue";
+import { IconArrowUp, IconChevronRight, IconPlayerPause, IconPlayerPlay, IconPlayerStopFilled } from "@tabler/icons-vue";
 import type { SingleAgentEvent } from "@toonflow/server/singleAgent/types";
+import type { ThinkingLevel } from "@toonflow/server/modelReasoning";
 import type { ToolCall } from "@toonflow/tools-scaffold/runtime";
 import modelPopover from "@/components/modelPopover.vue";
 import messageMarkdown from "@/components/messageMarkdown.vue";
@@ -89,7 +90,7 @@ const props = withDefaults(defineProps<{
 const visible = defineModel<boolean>({ default: false });
 const msgList = defineModel<AgentMessage[]>("msgList", { default: () => [] });
 const selectedModel = defineModel<string>("model", { default: "" });
-const thinkingLevel = defineModel<"off" | "low" | "medium" | "high">("thinkingLevel", { default: "off" });
+const thinkingLevel = defineModel<ThinkingLevel | undefined>("thinkingLevel", { default: undefined });
 const emit = defineEmits<{
   complete: [result: SingleAgentDialogResult];
   error: [error: Error];
@@ -105,7 +106,7 @@ const status = ref<"idle" | "running" | "pausing" | "paused">("idle");
 const busy = ref(false);
 const messageList = ref<HTMLElement>();
 const tools = computed<ToolCall[]>(() => msgList.value.flatMap(message => message.parts?.flatMap(part => part.type === "tool" ? [part.tool] : []) ?? []));
-const reasoningEffort = computed({ get: () => thinkingLevel.value === "off" ? "" : thinkingLevel.value, set: value => { thinkingLevel.value = value as typeof thinkingLevel.value || "off"; } });
+const reasoningEffort = computed({ get: () => thinkingLevel.value ?? "", set: (value: string) => { thinkingLevel.value = value ? value as ThinkingLevel : undefined; } });
 const statusLabels = { idle: "", running: "执行中", pausing: "等待当前操作结束…", paused: "已暂停，可人工操作" };
 const requestHeaders = { "x-toonflow-workspace": "1" };
 let lifecycle = new AbortController();
@@ -374,8 +375,19 @@ defineExpose({ send, pause, resume, stop, sessionId, msgList, tools, status });
           }
           .thinkingContent {
             margin: 10px 0;
-            summary { width: fit-content; color: var(--el-text-color-secondary); font-size: 12px; cursor: pointer; }
+            summary {
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              width: fit-content;
+              color: var(--el-text-color-secondary);
+              font-size: 12px;
+              cursor: pointer;
+              &::-webkit-details-marker { display: none; }
+              .thinkingChevron { flex-shrink: 0; }
+            }
             &[open] summary { margin-bottom: 8px; }
+            &[open] .thinkingChevron { transform: rotate(90deg); }
           }
           .replyPending { color: var(--el-text-color-secondary); }
           .messageError { margin-top: 8px; color: var(--el-color-danger); }

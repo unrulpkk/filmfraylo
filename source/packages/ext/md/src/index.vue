@@ -42,7 +42,7 @@
               :aria-label="translate('段落样式')"
               :title="textStyle">
               <icon-heading :size="17" />
-              <icon-chevron-down :size="12" />
+              <icon-chevron-down class="menuChevron" :size="12" />
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -60,7 +60,7 @@
               :aria-label="translate('列表')"
               :title="translate('列表')">
               <icon-list :size="17" />
-              <icon-chevron-down :size="12" />
+              <icon-chevron-down class="menuChevron" :size="12" />
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -159,7 +159,7 @@
           <el-dropdown v-if="editor.isActive('table')" trigger="click" @command="editTable">
             <el-button text size="small">
               {{ translate("表格") }}
-              <icon-chevron-down :size="12" />
+              <icon-chevron-down class="menuChevron" :size="12" />
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
@@ -644,6 +644,10 @@ onBeforeUnmount(() => { lifetime.abort(new Error("编辑器已关闭")); editor.
 
         + .toolbarGroup {
           border-left: 1px solid var(--el-border-color-lighter);
+        }
+
+        [aria-expanded="true"] .menuChevron {
+          transform: rotate(180deg);
         }
       }
 

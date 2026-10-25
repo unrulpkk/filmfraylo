@@ -139,7 +139,26 @@ function syncModel(value = sender?.getModel() ?? model.value) {
       selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
     } else if (focused && last?.type === "Write") last.focus(-1);
   }
-  model.value = next;
+  updateModel(next);
+}
+
+function getStoredModel(value: AnyTagProps[][]): AnyTagProps[][] {
+  return value.map(line => line.map(tag => {
+    if (tag.type !== "Custom") return tag;
+    const template = document.createElement("template");
+    template.innerHTML = tag.html;
+    // 参考缩略图及其临时地址只用于显示，不进入持久化模型。
+    const images = template.content.querySelectorAll(".imageReference img");
+    if (!images.length) return tag;
+    for (const image of images) image.remove();
+    return { ...tag, html: template.innerHTML };
+  }));
+}
+
+function updateModel(value: AnyTagProps[][]) {
+  const next = getStoredModel(value);
+  // ACT: 旧模型中的预览地址随下次实际编辑清理，避免仅打开文档就触发保存。
+  if (JSON.stringify(getStoredModel(model.value)) !== JSON.stringify(next)) model.value = next;
   text.value = getPromptText(next);
 }
 
@@ -161,7 +180,7 @@ function getPromptText(value: AnyTagProps[][]) {
 }
 
 watch(model, (value) => {
-  if (sender && JSON.stringify(value) !== JSON.stringify(sender.getModel())) syncModel(value);
+  if (sender && JSON.stringify(getStoredModel(value)) !== JSON.stringify(getStoredModel(sender.getModel()))) syncModel(value);
 }, { deep: true });
 
 watch(() => props.references, async (options) => {
@@ -261,7 +280,7 @@ watch(senderElement, (element, _previous, onCleanup) => {
   document.addEventListener("pointerdown", closeOutside, true);
   onCleanup(() => {
     stopExpandedWatch();
-    model.value = instance.getModel();
+    updateModel(instance.getModel());
     releaseNodeFocus(instance);
     sender = undefined;
     editor.removeEventListener("copy", copyText);
@@ -411,6 +430,8 @@ function handleMentionKey(event: KeyboardEvent) {
 
   &:deep(.chat-placeholder-wrap) {
     font-style: normal;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 </style>

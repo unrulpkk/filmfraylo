@@ -2,6 +2,7 @@
   <component v-if="renderer" :is="renderer" :tool="tool" :directory="directory" :toolSessionId="toolSessionId" @copy="emit('copy', $event)" />
   <el-text v-if="rendererError" type="danger">工具界面加载失败，请停止后重试：{{ rendererError }}</el-text>
   <chat-reasoning v-model:collapsed="collapsed" class="messageReasoning toolCall" expandIconPlacement="left">
+    <template #expandIcon><component :is="collapsed ? IconChevronRight : IconChevronDown" :size="14" aria-hidden="true" /></template>
     <template #header>
       <span class="toolHeader" :data-status="tool.status">
         <icon-tool :size="14" />
@@ -27,7 +28,7 @@
 <script setup lang="ts">
 import { computed, onErrorCaptured, ref, shallowRef, watch, type Component } from "vue";
 import { loadToolComponent } from "@toonflow/tools-scaffold/client";
-import { IconCopy, IconTool } from "@tabler/icons-vue";
+import { IconChevronDown, IconChevronRight, IconCopy, IconTool } from "@tabler/icons-vue";
 import chatReasoning from "@tdesign-vue-next/chat/es/chat-reasoning";
 import type { AgentToolCall } from "@toonflow/server/agent/types";
 import messageMarkdown from "@/components/messageMarkdown.vue";
@@ -79,6 +80,7 @@ function formatToolData(value: unknown) {
 <style scoped lang="scss">
 .toolCall {
   min-width: 0;
+  :deep(.t-collapse-panel__icon) { color: var(--el-text-color-secondary); }
 
   .toolHeader {
     display: flex;

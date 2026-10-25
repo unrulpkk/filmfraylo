@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { AgentMention } from "@/agent/runtime/types";
 import { getAssetsDirectory } from "@/utils/assets";
 import { lockWorkspaceFiles, resolveWorkspacePath } from "@/utils/workspace/files";
+import { getReadableFileExtension } from "@/lib/documentFormats";
 
 const mediaTypes = new Set(["IMAGE", "MASK", "VIDEO", "AUDIO", "FILE"]);
 const mediaValueSchema = z.strictObject({ url: z.string().min(1).max(4096), mimeType: z.string().min(1).max(128).regex(/^[\w.+-]+\/[\w.+-]+$/) });
@@ -90,7 +91,8 @@ export async function snapshotMentions(cwd: string, mentions: AgentMention[], sa
         throw Object.assign(new Error(t`引用「${mention.label}」不可用：${error instanceof Error ? error.message : "文件读取失败"}`), { status: 400 });
       }
       if (!media || previous) { result.push(mention); continue; }
-      const extension = extname(source);
+      const documentExtension = mention.dataType === "FILE" ? getReadableFileExtension(source, media.mimeType) : undefined;
+      const extension = documentExtension ? `.${documentExtension}` : extname(source);
       const path = `assets/chat/${crypto.randomUUID()}${/^\.[a-zA-Z0-9]{1,16}$/.test(extension) ? extension.toLowerCase() : ""}`;
       const folder = await resolveWorkspacePath(cwd, "assets/chat", true);
       const target = await resolveWorkspacePath(cwd, path, true);

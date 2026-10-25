@@ -1,0 +1,13 @@
+{
+  "name": "@toonflow/product",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./product.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

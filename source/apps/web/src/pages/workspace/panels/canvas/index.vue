@@ -2,14 +2,17 @@
   <div
     ref="canvasElement"
     class="canvas"
-    :class="{ edgesHidden: !showEdges, handMode, compositingEnabled: generalSettings.canvasCompositingEnabled }"
+    :class="{ edgesHidden: !showEdges, handMode, multiSelectionMode: flow.multiSelectionActive.value, compositingEnabled: generalSettings.canvasCompositingEnabled }"
     :style="{ '--canvasEdgeColor': generalSettings.canvasEdgeColorMode === 'custom' ? generalSettings.canvasEdgeColor : 'var(--el-color-primary)' }"
     @dblclick="openNodeMenu"
     @wheel.capture="zoomCanvas"
     @gesturestart.capture="zoomCanvas"
     @gesturechange.capture="zoomCanvas"
     @gestureend.capture="zoomCanvas"
-    @pointermove="pointerPosition = { x: $event.clientX, y: $event.clientY }"
+    @pointerdown.capture="updateCanvasSelection"
+    @click.capture="updateCanvasSelection"
+    @auxclick.capture="preventMiddleClick"
+    @pointermove="pointerPosition = { x: $event.clientX, y: $event.clientY }; if (!$event.buttons) updateCanvasSelection($event)"
     @pointerleave="pointerPosition = undefined"
     @dragover="dragFilesOver"
     @drop="dropFiles">
@@ -36,12 +39,12 @@
       :zoom-on-double-click="false"
       :zoomOnScroll="false"
       :zoomOnPinch="active && !settingsVisible"
-      :panOnScroll="active && !settingsVisible"
+      :panOnScroll="active && !settingsVisible && !defaultWheelZoom"
       :panOnScrollSpeed="1"
-      :panOnDrag="handMode || isMobile ? true : [1]"
+      :panOnDrag="handMode || isMobile ? true : defaultDragPan ? [0, 1] : [1]"
       :panOnScrollMode="PanOnScrollMode.Free"
       :delete-key-code="null"
-      :selectionKeyCode="!handMode && !isMobile"
+      :selectionKeyCode="active && !settingsVisible && !handMode && !isMobile && selectionKeyPressed"
       :selectionMode="SelectionMode.Partial"
       :multi-selection-key-code="null"
       :zoomActivationKeyCode="zoomKeyPressed ? true : null"
@@ -60,6 +63,10 @@
           :loading="nodeLoads.has(type) || (nodeListLoading && !nodeTypes[type] && !nodeErrors[type])" />
       </template>
       <background :gap="16" pattern-color="var(--el-border-color)" />
+      <canvasEmpty
+        v-if="active && !settingsVisible && project?.directory && canvasReady && !flow.getNodes.value.length"
+        :availableNodes="availableNodes"
+        @create="createEmptyNode" />
       <canvasMenu ref="canvasMenuRef" v-model:canvasId="canvasId" :directory="project?.directory" :initialCanvasId="initialCanvasId" :activateCanvas="activateCanvas" :flushSave="flushCanvases ?? flushCanvasSave">
         <assetLibrary ref="assetLibraryRef" v-model="assetsVisible" :directory="project?.directory" />
       </canvasMenu>
@@ -119,7 +126,7 @@ import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, onScopeDispose
 import axios from "axios";
 import { debounce } from "lodash-es";
 import { ElMessage } from "element-plus";
-import { isMobile } from "@/lib/mobile";
+import { isMobile, isDesktop } from "@/lib/platform";
 import { storeToRefs } from "pinia";
 import { IconUnlink } from "@tabler/icons-vue";
 import * as vueRuntime from "vue";
@@ -136,6 +143,7 @@ import {
   SelectionMode,
   useVueFlow,
   wheelDelta,
+  isMacOs,
   isNode,
   type Node,
   type Edge,
@@ -155,6 +163,7 @@ import nodeMenu from "./components/nodeMenu.vue";
 import remoteNode from "./components/remoteNode.vue";
 import canvasMenu from "./components/canvasMenu.vue";
 import canvasControls from "./components/canvasControls.vue";
+import canvasEmpty from "./components/canvasEmpty.vue";
 import assetLibrary from "./components/assetLibrary.vue";
 import groupNode from "./components/groupNode.vue";
 import selectionToolbar from "./components/selectionToolbar.vue";
@@ -209,12 +218,14 @@ let loadRequest = 0;
 const snapEnabled = ref(false);
 const zoomKeyPressed = ref(false);
 const panKeyPressed = ref(false);
-const selectedTool = ref<"move" | "hand">("move");
+const selectionKeyPressed = ref(false);
+const defaultWheelZoom = computed(() => getShortcutBindings(generalSettings.value.canvasShortcuts.zoom).includes("None"));
+const defaultDragPan = computed(() => getShortcutBindings(generalSettings.value.canvasShortcuts.pan).includes("None"));
+const selectedTool = defineModel<"move" | "hand">("selectedTool", { default: "move" });
 const handMode = computed(() => props.active && !props.settingsVisible && (selectedTool.value === "hand" || panKeyPressed.value));
 let pointerPosition: XYPosition | undefined;
 const pressedCodes = new Set<string>();
 let gestureScale: number | undefined;
-const isDesktop = new URLSearchParams(window.location.search).get("desktop") === "1";
 let copyingNodes = false;
 const showEdges = ref(true);
 const assetsVisible = ref(false);
@@ -276,14 +287,20 @@ const createCanvasContext = useCanvasTools({
   resolveCanvasContext: id => props.resolveCanvasContext?.(id),
 });
 function getCanvasContext() {
-  return canvasId.value ? createCanvasContext(canvasId.value, canvasController.signal, workspaceController.signal) : undefined;
+  return canvasId.value || canvasMenuRef.value?.initialized ? createCanvasContext(canvasId.value, canvasController.signal, workspaceController.signal) : undefined;
 }
 const canvasReady = computed(() => !!canvasId.value && !nodeListLoading.value && nodeLoads.size === 0);
 provide("canvas", getCanvasContext);
-defineExpose({ canvasId, canvasReady, getCanvasContext, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+defineExpose({ canvasId, canvasReady, getCanvasContext, addNodeAtPointer, readDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, prepareCanvasDelete, flushSave: flushCanvasSave, cancelSave: cancelCanvasSave,
+  openNodeSearch: () => nodeSearchRef.value?.open(),
+  getCanvases: (signal?: AbortSignal) => {
+    if (!canvasMenuRef.value) throw new Error("画布菜单尚未就绪");
+    return canvasMenuRef.value.getCanvases(signal);
+  },
   syncCanvasPath: (previous: string, target: string) => canvasMenuRef.value?.syncCanvasPath(previous, target),
   getMentionNodes: () => flow.nodes.value, findMentionNode: flow.findNode,
   getRetainedNodes: canvasHistory.getRetainedNodes,
+  get canvasListReady() { return canvasMenuRef.value?.initialized ?? false; },
   get saveBusy() { return savePaused; }, get loadError() { return canvasMenuRef.value?.loadError ?? ""; },
 });
 
@@ -504,7 +521,16 @@ function openNodeMenu(event: MouseEvent) {
   if (event.target instanceof Element && event.target.classList.contains("vue-flow__pane")) nodeMenuRef.value?.openMenu(event, true);
 }
 
+function createEmptyNode(type: string) {
+  if (!props.active || props.settingsVisible || !project.value?.directory || !canvasReady.value || flow.getNodes.value.length) return;
+  const rect = canvasElement.value?.getBoundingClientRect();
+  if (!rect) return;
+  const center = screenToFlowCoordinate({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  void nodeMenuRef.value?.addNode(type, { x: center.x - 200, y: center.y - 160 });
+}
+
 function addNodeAtPointer() {
+  if (!props.active || props.settingsVisible || !project.value?.directory || !canvasReady.value) return;
   const rect = canvasElement.value?.getBoundingClientRect();
   if (!rect) return;
   const position = pointerPosition ?? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -888,12 +914,21 @@ function zoomCanvas(event: WheelEvent | (Event & { scale: number })) {
   } else {
     // ACT: Chromium 捏合发送 Ctrl+wheel，但不发送 Control 按键；WebKit 使用上方原生 gesture 事件。
     const pinching = event.ctrlKey && !pressedCodes.has("ControlLeft") && !pressedCodes.has("ControlRight");
+    // 无需按键的滚轮缩放让节点控件保留自己的滚动；显式缩放快捷键及捏合仍沿用原行为。
+    if (defaultWheelZoom.value && !pinching && !zoomKeyPressed.value
+      && event.target.closest(".nowheel, input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='slider']")) return;
     if (!pinching && !shortcutPressed(event, generalSettings.value.canvasShortcuts.zoom, pressedCodes)) {
       if (!event.ctrlKey) return;
       // 实体 Ctrl 未绑定缩放时，阻止 Vue Flow 和节点骨架将它误判为捏合。
       factor = 1;
+    } else if (pinching && gestureScale !== undefined) {
+      factor = 1;
+    } else if (pinching) {
+      factor = 2 ** (-event.deltaY * 0.02);
     } else {
-      factor = pinching && gestureScale !== undefined ? 1 : 2 ** (pinching ? -event.deltaY * 0.02 : wheelDelta(event));
+      // ACT: @vue-flow/core 的 wheelDelta 在 macOS 下若检测到 event.ctrlKey 会额外乘以 10（误判为捏合微步）；非捏合的实体 Ctrl 滚轮缩放需剔除该倍数，保留标准滚轮速度。
+      const delta = wheelDelta(event) / (event.ctrlKey && isMacOs() ? 10 : 1);
+      factor = 2 ** delta;
     }
     point = { x: event.clientX, y: event.clientY };
   }
@@ -909,6 +944,17 @@ function zoomCanvas(event: WheelEvent | (Event & { scale: number })) {
   selection.call<[number, [number, number], Event]>(zoom.scaleBy, factor, [point.x - bounds.left, point.y - bounds.top], event);
 }
 
+function preventMiddleClick(event: MouseEvent) {
+  if (event.button === 1) event.preventDefault();
+}
+
+function updateCanvasSelection(event: MouseEvent | KeyboardEvent) {
+  // 失焦期间可能漏掉修饰键；不能在按下到抬起之间改变已命中的选区，避免 click 落到画布清空选择。
+  if (event.type === "pointerdown" && event.target instanceof Element && event.target.closest(".vue-flow__nodesselection-rect")) return;
+  flow.multiSelectionActive.value = props.active && !props.settingsVisible && !handMode.value
+    && shortcutPressed(event, generalSettings.value.canvasShortcuts.multiSelection, pressedCodes);
+}
+
 function updateCanvasKeys(event: KeyboardEvent) {
   if (event.type === "keydown") {
     pressedCodes.add(event.code);
@@ -920,11 +966,16 @@ function updateCanvasKeys(event: KeyboardEvent) {
     target instanceof Element &&
     !target.closest("[role='dialog'], #agentPanel") &&
     (target === document.body || target === document.documentElement || canvasElement.value?.contains(target));
-  zoomKeyPressed.value = !event.isComposing && shortcutPressed(event, shortcuts.zoom, pressedCodes);
+  // None 只配置默认鼠标手势，不能触发会禁用节点交互的临时抓手或节点内部缩放。
+  zoomKeyPressed.value = !event.isComposing && shortcutPressed(event, getShortcutBindings(shortcuts.zoom).filter(binding => binding !== "None").join(" / "), pressedCodes);
+  selectionKeyPressed.value = !event.isComposing && shortcutPressed(event, shortcuts.selection, pressedCodes);
+  if (!selectionKeyPressed.value && !flow.userSelectionActive.value) flow.userSelectionRect.value = null;
   const editing =
     !(target instanceof Element) ||
     !!target.closest("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox'], [role='slider']");
-  panKeyPressed.value = !!inCanvas && !editing && !event.isComposing && shortcutPressed(event, shortcuts.pan, pressedCodes);
+  panKeyPressed.value = !!inCanvas && !editing && !event.isComposing
+    && shortcutPressed(event, getShortcutBindings(shortcuts.pan).filter(binding => binding !== "None").join(" / "), pressedCodes);
+  updateCanvasSelection(event);
   if (event.type === "keyup" || event.defaultPrevented || event.isComposing || !inCanvas || editing) return;
   const action = ([
     "group", "mergeGroup", "ungroup", "addNode", "moveTool", "handTool", "arrange", "search",
@@ -972,9 +1023,12 @@ function resetCanvasKeys() {
   gestureScale = undefined;
   zoomKeyPressed.value = false;
   panKeyPressed.value = false;
+  selectionKeyPressed.value = getShortcutBindings(generalSettings.value.canvasShortcuts.selection).includes("None");
+  flow.multiSelectionActive.value = false;
+  if (!flow.userSelectionActive.value) flow.userSelectionRect.value = null;
 }
 
-watch([() => props.settingsVisible, () => generalSettings.value.canvasShortcuts], resetCanvasKeys, { deep: true, flush: "sync" });
+watch([() => props.active, () => props.settingsVisible, () => generalSettings.value.canvasShortcuts], resetCanvasKeys, { deep: true, flush: "sync", immediate: true });
 
 function refreshInstalled(event: WindowEventMap["toonflow:plugin-installed"]) {
   if (event.detail.type === "node") void loadRemoteNodes(event.detail.name);
@@ -1123,7 +1177,7 @@ async function loadRemoteNodes(reloadName?: string) {
 }
 
 const defaultEdgeOptions = markRaw({
-  type: "simple-bezier",
+  type: "simplebezier",
   animated: false,
   class: ({ sourceNode, targetNode }: GraphEdge) => {
     if (!sourceNode.selected && !sourceNode.dragging && !targetNode.selected && !targetNode.dragging) return "";
@@ -1158,7 +1212,8 @@ const defaultEdgeOptions = markRaw({
     display: none;
   }
   &.edgesHidden :deep(.vue-flow__handle:not(.connectedNodeActive)) {
-    display: none !important;
+    // Vue Flow 仍会测量隐藏端口，必须保留布局以免零尺寸污染连线坐标。
+    visibility: hidden !important;
   }
 
   :deep(.vue-flow__edge.edgeActive .vue-flow__edge-path) {
@@ -1174,6 +1229,10 @@ const defaultEdgeOptions = markRaw({
     padding: 8px;
     margin: -8px;
     border-radius: 4px;
+  }
+
+  &.multiSelectionMode :deep(.vue-flow__nodesselection-rect) {
+    pointer-events: none;
   }
 }
 .edgeDisconnect {

@@ -5,8 +5,8 @@ import { isCanvasFile } from "@/pages/workspace/canvasFile";
 
 type Files = ReturnType<typeof useWorkspaceFiles>;
 type CanvasFile = { toonflowCanvas: true; nodes: Node[]; edges: Edge[]; viewport: ViewportTransform };
-export type DocumentNode = { canvasPath: string; nodeId: string; label: string; nodeType?: string };
-export type DocumentNodeOptions = { canvasPath?: string; signal?: AbortSignal; onError?: (path: string, error: unknown) => void };
+export type DocumentNode = { canvasPath: string; nodeId: string; label: string; nodeType?: string; parentNode?: string };
+export type DocumentNodeOptions = { canvasPath?: string; includeGroups?: boolean; signal?: AbortSignal; onError?: (path: string, error: unknown) => void };
 
 export async function readCanvasFiles(files: Files, path = "", options: Omit<DocumentNodeOptions, "canvasPath"> = {}) {
   const { signal, onError } = options;
