@@ -7,9 +7,11 @@
     "./promptInput": "./src/components/promptInput.vue",
     "./referenceItem": "./src/components/referenceItem.vue",
     "./mediaHistory": "./src/components/mediaHistory.vue",
+    "./mediaPrice": "./src/components/mediaPrice.vue",
     "./showNodeError": "./src/showNodeError.ts",
     "./useNodeReferences": "./src/useNodeReferences.ts",
     "./useNodeGeneration": "./src/useNodeGeneration.ts",
+    "./useAudioTranscription": "./src/useAudioTranscription.ts",
     "./groupNodeModels": "./src/groupNodeModels.ts"
   },
   "scripts": {

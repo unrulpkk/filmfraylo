@@ -30,10 +30,6 @@
 
 `NODE_ENV=dev bun run --filter @toonflow/tool-browser build`
 
-`bun run --filter @toonflow/tool-browser demo` 启动临时本机网页，调用真实浏览器并检查操作、画面、隔离、取消清理及人工悬停、拖拽、双击、修饰键、释放、地址导航、前后退与刷新；不调用模型服务。
-
-在子包目录运行 `bun demo.ts --detect`，检查主页面、跨源 iframe、三类 Worker、网页弹窗和 Agent 新标签的 UA、Client Hints、webdriver、原生描述符及尺寸；加 `--executable=浏览器绝对路径` 可指定 Edge 或 Chrome。探针使用本机内存网页，不访问检测网站。缺少检测结果或受保障项退化会失败退出；已知泄漏单独列在 `knownLeaks` 和 `geometryWarnings`，进程退出成功仅表示探针完成，不能当作隐蔽性全部通过。
-
 浏览器运行时与输入协议分别通过 `./host`、`./protocol` 导出。宿主持有运行时，并通过工具上下文注入调用入口，确保工具和画面接口共享同一会话。
 
 前端通过 `./client` 的 `isBrowserTool` 筛选浏览器工具，保留完整工具历史数据，将筛选结果传给 `./panel` 的 `browserPanel`：`tools: ToolCall[]`、`directory?: string`、`active: boolean`。面板位于对应消息的工具栏下方，虚拟列表额外保留当前浏览器消息，滚动或追加消息不会卸载画面或重建连接。历史会话失效时显示已结束，工具失败和中断仍在卡片中显示。

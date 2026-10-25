@@ -96,8 +96,30 @@
 </p>
 
 <p align="center">
-  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197" target="_blank" rel="noopener noreferrer">
-    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/daily?language=TypeScript" alt="HBAI-Ltd/Toonflow-app | ट्रेंडशिफ्ट" width="250" height="55" />
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/daily?language=HTML" alt="HBAI-Ltd/Toonflow-app | Trendshift HTML Repository Of The Day" width="250" height="55" />
+  </a>
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/daily?language=Vue" alt="HBAI-Ltd/Toonflow-app | Trendshift Vue Repository Of The Day" width="250" height="55" />
+  </a>
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/daily?language=TypeScript" alt="HBAI-Ltd/Toonflow-app | Trendshift TypeScript Repository Of The Day" width="250" height="55" />
+  </a>
+</p>
+<p align="center">
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/weekly?language=Vue" alt="HBAI-Ltd/Toonflow-app | Trendshift Vue Repository Of The Week" width="250" height="55" />
+  </a>
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/weekly?language=HTML" alt="HBAI-Ltd/Toonflow-app | Trendshift HTML Repository Of The Week" width="250" height="55" />
+  </a>
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/weekly?language=TypeScript" alt="HBAI-Ltd/Toonflow-app | Trendshift TypeScript Repository Of The Week" width="250" height="55" />
+  </a>
+</p>
+<p align="center">
+  <a href="https://trendshift.io/repositories/24197?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-24197#achievements" target="_blank" rel="noopener noreferrer">
+    <img src="https://trendshift.io/api/badge/trendshift/repositories/24197/monthly?language=HTML" alt="HBAI-Ltd/Toonflow-app | Trendshift HTML Repository Of The Month" width="250" height="55" />
   </a>
 </p>
 

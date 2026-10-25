@@ -9,11 +9,17 @@ const rules = [
 ];
 
 const apiUrl = "https://api.toonflow.net/v1";
-const version = "2.0.1";
+const version = "2.0.2";
 
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("TF-router 响应格式错误");
   return value as Record<string, unknown>;
+}
+
+function balanceAmount(value: unknown) {
+  const amount = typeof value === "string" && value.trim() ? Number(value) : value;
+  if (typeof amount !== "number" || !Number.isFinite(amount)) throw new Error("TF-router 金额响应格式错误");
+  return amount;
 }
 
 async function fetchJson(context: ProviderContext, path: string, body?: unknown, signal = context.signal) {
@@ -230,6 +236,31 @@ export default {
       loudnessRate: Math.round((10 ** (volume / 20) - 1) * 100),
       pitchRate: pitch,
     }, mimeTypes[format]);
+  },
+  async getPrice(request: ProviderPriceRequest): Promise<ProviderPrice | null> {
+    const result = await fetchJson(this, "price", request);
+    if (result.code !== 200) throw new Error(this.tool.errorMessage(result) || "TF-router 价格查询失败");
+    if (result.data === null) return null;
+    const price = object(result.data);
+    if (typeof price.price === "string" && price.price.trim() && typeof price.tips === "string") return { price: price.price, tips: price.tips };
+    // ACT: 兼容仍返回数值报价的官方接口；统一升级后可移除此分支。
+    const amount = balanceAmount(price.amount);
+    if (amount < 0 || typeof price.unit !== "string" || !price.unit.trim()) throw new Error("TF-router 价格响应格式错误");
+    return { price: `${amount} ${price.unit.trim()}`, tips: "以实际扣费为准" };
+  },
+  async getBalance(): Promise<ProviderBalance> {
+    const result = await fetchJson(this, "balance");
+    if (result.code !== 200) throw new Error(this.tool.errorMessage(result) || "TF-router 余额查询失败");
+    const balance = object(result.data);
+    // ACT: 旧版余额接口以元计价且没有 unit；升级接口返回单位后直接沿用，不换算数值。
+    const unit = balance.unit === undefined ? "元" : balance.unit;
+    if (typeof unit !== "string" || !unit.trim()) throw new Error("TF-router 余额单位格式错误");
+    return {
+      balance: balanceAmount(balance.balance), unit: unit.trim(),
+      ...(balance.keyBalance === undefined ? {} : { keyBalance: balance.keyBalance === null ? null : balanceAmount(balance.keyBalance) }),
+      ...(balance.totalConsumption === undefined ? {} : { totalConsumption: balanceAmount(balance.totalConsumption) }),
+      ...(balance.totalRecharge === undefined ? {} : { totalRecharge: balanceAmount(balance.totalRecharge) }),
+    };
   },
   async generateImage(request: ImageRequest): Promise<MediaAsset[]> {
     const model = request.model.toLowerCase();

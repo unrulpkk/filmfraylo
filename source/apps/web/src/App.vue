@@ -2,10 +2,11 @@
   <el-config-provider :locale="elementLocale">
     <config-provider :globalConfig="tdesignLocale">
       <router-view v-slot="{ Component: currentComponent }">
-        <transition name="el-fade-in">
+        <transition name="el-fade-in" mode="out-in">
           <component :is="currentComponent" />
         </transition>
       </router-view>
+      <loadingPage v-model:visible="workspaceStore.projectLoadingVisible" v-model:drawn="workspaceStore.projectLoadingDrawn" :active="workspaceStore.projectLoading" />
       <ffmpegRequired />
       <updateBox
         v-if="updateBoxBuild && !installFailure"
@@ -53,15 +54,18 @@ import tdesignAr from "tdesign-vue-next/es/locale/ar_KW";
 import { locale } from "@toonflow/i18n/vue";
 import type { updateSnapshot } from "@toonflow/server/desktop";
 import { chatLocale } from "@/lib/i18n";
-import { isMobile } from "@/lib/mobile";
+import { isMobile, isDesktop } from "@/lib/platform";
 import { saveSettings, settings, uiSettings } from "@/stores/settings";
 import { desktopUpdateSnapshot, stopDesktopUpdateObservation } from "@/stores/desktopUpdate";
+import { useWorkspaceStore } from "@/stores/workspace";
+import loadingPage from "@/components/loadingPage.vue";
 import { useMcpControl } from "@/lib/mcpControl";
 import ffmpegRequired from "@/components/settings/ffmpegRequired.vue";
 import updateBox from "@/components/updateBox.vue";
 import "element-plus/theme-chalk/dark/css-vars.css";
 
 useMcpControl();
+const workspaceStore = useWorkspaceStore();
 
 // ACT: TDesign 缺少的语言使用英语基底，聊天控件由应用字典补齐。
 const tdesignLocales = {
@@ -75,7 +79,6 @@ const tdesignLocale = computed(() => ({ ...tdesignLocales[locale.value], chat: c
 const updateBoxVisible = ref(false);
 const updateBoxBuild = shallowRef<{ version: string; hash: string }>();
 const shownUpdateBuilds = new Set<string>();
-const isDesktop = new URLSearchParams(window.location.search).get("desktop") === "1";
 const installFailureVisible = ref(false);
 const installFailure = shallowRef<updateSnapshot["installFailure"]>();
 const shownInstallAttempts = new Set<string>();

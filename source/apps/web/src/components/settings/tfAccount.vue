@@ -6,7 +6,7 @@
         <el-skeleton v-if="loading && !balance" animated>
           <template #template><el-skeleton-item class="balancePlaceholder" variant="text" /></template>
         </el-skeleton>
-        <strong v-else class="balanceNumber">{{ balance ? numberFormat.format(balance.balance) : "—" }}</strong>
+        <strong v-else class="balanceNumber">{{ balance ? `${numberFormat.format(balance.balance)} ${balance.unit}` : "—" }}</strong>
       </div>
       <div class="accountActions">
         <el-button text circle :icon="IconRefresh" :loading="loading" :disabled="!apiKey" aria-label="刷新余额" title="刷新余额" @click="refresh" />
@@ -37,17 +37,17 @@
       <el-button text size="small" :disabled="loading" @click="refresh">重试</el-button>
     </div>
     <div v-if="balance" class="accountDetails">
-      <div class="accountMetric">
+      <div v-if="balance.keyBalance !== undefined" class="accountMetric">
         <el-text size="small" type="info">密钥余额</el-text>
-        <span>{{ balance.keyBalance === null ? "无限制" : numberFormat.format(balance.keyBalance) }}</span>
+        <span>{{ balance.keyBalance === null ? "无限制" : `${numberFormat.format(balance.keyBalance)} ${balance.unit}` }}</span>
       </div>
-      <div class="accountMetric">
+      <div v-if="balance.totalConsumption !== undefined" class="accountMetric">
         <el-text size="small" type="info">累计消费</el-text>
-        <span>{{ numberFormat.format(balance.totalConsumption) }}</span>
+        <span>{{ numberFormat.format(balance.totalConsumption) }} {{ balance.unit }}</span>
       </div>
-      <div class="accountMetric">
+      <div v-if="balance.totalRecharge !== undefined" class="accountMetric">
         <el-text size="small" type="info">累计充值</el-text>
-        <span>{{ numberFormat.format(balance.totalRecharge) }}</span>
+        <span>{{ numberFormat.format(balance.totalRecharge) }} {{ balance.unit }}</span>
       </div>
     </div>
     <component :is="rechargeDialog" v-model="rechargeVisible" :apiKey="apiKey" />
@@ -59,13 +59,15 @@ import { locale } from "@toonflow/i18n/vue";
 import { computed, defineAsyncComponent, onBeforeUnmount, ref, shallowRef, watch, type Component } from "vue";
 import axios from "axios";
 import { IconCreditCard, IconExternalLink, IconRefresh } from "@tabler/icons-vue";
-import tf, { type TfBalance } from "@/lib/tf";
+import type { ProviderBalance } from "@toonflow/providers";
+import { getProviderBalance, providerBalances } from "@/lib/providerBilling";
 
 const props = withDefaults(defineProps<{
   apiKey: string;
   visible?: boolean;
   saveApiKey: (key: string) => Promise<void>;
 }>(), { visible: true });
+const emit = defineEmits<{ rechargeVisibleChange: [visible: boolean] }>();
 const rechargeDialog = shallowRef<Component>();
 const rechargeVisible = ref(false);
 const apiKey = computed(() =>
@@ -74,13 +76,16 @@ const apiKey = computed(() =>
     .replace(/^Bearer\s+/i, "")
     .trim()
 );
-const balance = ref<TfBalance>();
+const balance = ref<ProviderBalance>();
+const accountId = ref("");
+const sharedBalance = computed(() => accountId.value ? providerBalances.value.find(entry => entry.accountId === accountId.value)?.balance : undefined);
+watch(sharedBalance, value => { if (value) balance.value = value; });
 const loading = ref(false);
 const errorMessage = ref("");
 const draftKey = ref("");
 const saving = ref(false);
 const setupError = ref("");
-const numberFormat = computed(() => new Intl.NumberFormat(locale.value, { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 6 }));
+const numberFormat = computed(() => new Intl.NumberFormat(locale.value, { maximumFractionDigits: 6 }));
 let controller: AbortController | undefined;
 let rechargeKey = "";
 
@@ -115,8 +120,11 @@ async function refresh() {
   controller = request;
   loading.value = true;
   try {
-    const result = await tf.getBalance({ apiKey: apiKey.value, signal: request.signal });
-    if (!request.signal.aborted) balance.value = result;
+    const result = await getProviderBalance("tfRouter", { apiKey: apiKey.value, signal: request.signal });
+    if (!request.signal.aborted) {
+      accountId.value = result.accountId;
+      balance.value = sharedBalance.value ?? result.balance ?? undefined;
+    }
   } catch (error) {
     if (!request.signal.aborted) {
       errorMessage.value = axios.isAxiosError<{ message?: string }>(error)
@@ -134,6 +142,7 @@ watch(
   [apiKey, () => props.visible],
   () => {
     rechargeVisible.value = false;
+    accountId.value = "";
     balance.value = undefined;
     draftKey.value = "";
     setupError.value = "";
@@ -142,9 +151,13 @@ watch(
   { immediate: true }
 );
 watch(rechargeVisible, (isOpen, wasOpen) => {
+  emit("rechargeVisibleChange", isOpen);
   if (wasOpen && !isOpen && rechargeKey === apiKey.value && props.visible) void refresh();
+}, { flush: "sync" });
+onBeforeUnmount(() => {
+  controller?.abort();
+  emit("rechargeVisibleChange", false);
 });
-onBeforeUnmount(() => controller?.abort());
 </script>
 
 <style lang="scss" scoped>

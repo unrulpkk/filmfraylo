@@ -41,7 +41,7 @@
       @click="changeLanguage('system')">
       <span class="systemIcon"><icon-device-desktop :size="22" aria-hidden="true" /></span>
       <span class="systemText"><strong>{{ translate('跟随系统') }}</strong><small dir="auto">{{ systemLanguageName }}</small></span>
-      <span class="selectionMark" aria-hidden="true"><icon-check v-if="uiSettings.language === 'system'" :size="12" :strokeWidth="3" /></span>
+      <span class="selectionMark" aria-hidden="true"><icon-check v-if="uiSettings.language === 'system'" :size="12" stroke="3" /></span>
     </button>
     <div class="languageGrid">
       <button
@@ -56,7 +56,7 @@
         @click="changeLanguage(language.code)">
         <span class="cardTop">
           <svg class="languageFlag" viewBox="0 0 32 24" aria-hidden="true"><use :href="`${languageFlags}#${flagIds[language.code]}`" /></svg>
-          <span class="selectionMark" aria-hidden="true"><icon-check v-if="uiSettings.language === language.code" :size="12" :strokeWidth="3" /></span>
+          <span class="selectionMark" aria-hidden="true"><icon-check v-if="uiSettings.language === language.code" :size="12" stroke="3" /></span>
         </span>
         <span class="languageName" :lang="language.code" dir="auto">{{ language.name }}</span>
       </button>

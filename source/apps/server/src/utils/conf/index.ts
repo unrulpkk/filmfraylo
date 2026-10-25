@@ -1,11 +1,13 @@
 import conf from "conf";
-import { mkdirSync, realpathSync } from "@toonflow/file";
+import { mkdirSync, readdirSync, realpathSync } from "@toonflow/file";
 import { resolve } from "node:path";
 import tfRouter from "@toonflow/providers/language/tfRouter";
 import type { RemoteTeam } from "@/utils/teams";
 import type { A2aSettings } from "@/agent/a2a/settings";
 import type { desktopUpdateAttempt } from "@/types/desktop";
 import type { MobileLinkConfig } from "@/utils/mobileLink";
+import { normalizeNodeMenu, serializeNodeMenu } from "@/lib/nodeMenu";
+import type { SavedMcpServer } from "@toonflow/mcp/client";
 
 const autoInstallProviders = [tfRouter];
 const dataDirectory = process.env.TOONFLOW_DATA_DIR ?? resolve(import.meta.dirname, "../../../../../data");
@@ -13,7 +15,7 @@ mkdirSync(dataDirectory, { recursive: true });
 const configDirectory = realpathSync(dataDirectory);
 process.env.TOONFLOW_DATA_DIR = configDirectory;
 
-const config = new conf<{ settings: Record<string, unknown>; disabledSkills: string[]; toolConfigs: Record<string, Record<string, unknown>>; nodeConfigs: Record<string, Record<string, unknown>>; extConfigs: Record<string, Record<string, unknown>>; remoteConnections: Record<string, RemoteTeam>; a2a: A2aSettings; desktopUpdateAttempt: desktopUpdateAttempt; mobileLink: MobileLinkConfig }>({
+const config = new conf<{ settings: Record<string, unknown>; disabledSkills: string[]; mcpServers: SavedMcpServer[]; mcpBundles: Record<string, string>; toolConfigs: Record<string, Record<string, unknown>>; nodeConfigs: Record<string, Record<string, unknown>>; extConfigs: Record<string, Record<string, unknown>>; remoteConnections: Record<string, RemoteTeam>; a2a: A2aSettings; desktopUpdateAttempt: desktopUpdateAttempt; mobileLink: MobileLinkConfig }>({
   cwd: configDirectory,
   configName: "settings",
   configFileMode: 0o600,
@@ -30,6 +32,29 @@ export function removeLegacySettings(settings: Record<string, unknown>) {
     }
   }
   return changed;
+}
+
+export function cleanNodeMenuSettings(settings: Record<string, unknown>) {
+  const general = settings.general;
+  if (!general || typeof general !== "object" || Array.isArray(general) || !Object.hasOwn(general, "nodeMenu")) return false;
+  const record = general as Record<string, unknown>;
+  const installedTypes = new Set<string>();
+  try {
+    // ACT: 仅扫描已安装文件名；禁用节点保留配置，菜单清理与同步存盘间不插入异步等待。
+    for (const file of readdirSync(resolve(configDirectory, "nodes"), { withFileTypes: true })) {
+      if (file.isFile() && /^[a-z][a-zA-Z0-9]*\.umd\.js$/.test(file.name)) installedTypes.add(`remote-${file.name.slice(0, -7)}`);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const nodeMenu = serializeNodeMenu(normalizeNodeMenu(record.nodeMenu), installedTypes);
+  if (!nodeMenu.length) {
+    delete record.nodeMenu;
+    return true;
+  }
+  if (JSON.stringify(record.nodeMenu) === JSON.stringify(nodeMenu)) return false;
+  record.nodeMenu = nodeMenu;
+  return true;
 }
 
 const settings = config.get("settings", {});

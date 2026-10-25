@@ -11,6 +11,14 @@ export function buildInpaintPrompt(prompt: string) {
   return prompt.startsWith(inpaintInstruction) ? prompt : `${inpaintInstruction}\n\n重绘要求：\n${prompt}`;
 }
 
+export function buildInpaintRequest<T extends Pick<NodeImageRequest, "prompt" | "images">>(input: T, inpaint: ImageInpaint): T {
+  return {
+    ...input,
+    images: [{ path: inpaint.original, mimeType: "image/png" }, { path: inpaint.guide, mimeType: "image/png" }, ...inpaint.images, ...(input.images ?? [])],
+    prompt: buildInpaintPrompt(input.prompt),
+  };
+}
+
 export function useImageInpaint() {
   const { id, node } = useNode();
   const { findNode } = useVueFlow();
@@ -60,13 +68,11 @@ export function useImageInpaint() {
       signal.throwIfAborted();
       requested = true;
       // ACT: 供应商尚未统一支持原生 mask；使用涂色参考引导，再按本地蒙版合成，严格保留区域外像素。
-      const [result] = await ai.generateImage({
+      const [result] = await ai.generateImage(buildInpaintRequest({
         ...input,
         directory,
         outputDirectory: `assets/${temporaryId}`,
-        images: [{ path: inpaint.original, mimeType: "image/png" }, { path: inpaint.guide, mimeType: "image/png" }, ...inpaint.images, ...(input.images ?? [])],
-        prompt: buildInpaintPrompt(input.prompt),
-      }, signal);
+      }, inpaint), signal);
       signal.throwIfAborted();
       if (!result) throw new Error("供应商未返回图片");
       const generated = await readImage(result.path, result.mimeType);

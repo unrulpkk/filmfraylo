@@ -2,6 +2,7 @@
   <div class="canvasHost">
     <canvasPanel
       v-for="entry in entries"
+      v-model:selectedTool="selectedTool"
       :key="entry.key"
       :ref="value => setInstance(entry.key, value)"
       class="canvasRuntime"
@@ -30,6 +31,7 @@ import type { NodeDocumentState } from "@toonflow/nodes-scaffold/nodeDocument";
 import { copyCanvasFiles, readCanvasFiles, type DocumentNode, type DocumentNodeOptions } from "./canvasFiles";
 
 const props = withDefaults(defineProps<{ active?: boolean; settingsVisible?: boolean }>(), { active: true, settingsVisible: false });
+const selectedTool = defineModel<"move" | "hand">("selectedTool", { default: "move" });
 type CanvasInstance = InstanceType<typeof canvasPanel>;
 const entries = shallowRef<{ key: string; fileName?: string }[]>([{ key: crypto.randomUUID() }]);
 const activeKey = ref(entries.value[0]!.key);
@@ -37,11 +39,14 @@ const instances = shallowReactive(new Map<string, CanvasInstance>());
 const activeInstance = computed(() => instances.get(activeKey.value));
 const canvasId = computed(() => activeInstance.value?.canvasId ?? "");
 const canvasReady = computed(() => activeInstance.value?.canvasReady ?? false);
+const canvasListReady = computed(() => activeInstance.value?.canvasListReady ?? false);
 const lifetime = new AbortController();
 const workspaceStore = useWorkspaceStore();
 const canvases = shallowRef<{ id: string; name: string }[]>([]);
 let fileActionBusy = false;
 provide("canvasList", canvases);
+provide("canvasFolders", shallowRef([]));
+provide("canvasLoadedDirectories", shallowRef<string[]>([]));
 provide("canvasAssetNodes", (id: string) => [...instances.values()].find(panel => panel.canvasId === id)?.getRetainedNodes() ?? []);
 watch(canvases, (current, previous) => {
   const removed = new Set(previous.filter(canvas => !current.includes(canvas)).map(canvas => canvas.id));
@@ -74,7 +79,7 @@ async function ensureCanvas(fileName: string, signal?: AbortSignal, activate = f
   callSignal.throwIfAborted();
   fileName = relativePath(fileName);
   if (!canvases.value.length && entries.value.some(entry => entry.fileName === undefined)) {
-    await waitForControlValue(() => activeInstance.value?.canvasReady || activeInstance.value?.loadError || undefined, callSignal);
+    await waitForControlValue(() => activeInstance.value?.canvasListReady || activeInstance.value?.loadError || undefined, callSignal);
   }
   fileName = canonicalCanvasPath(fileName);
   if (!canvases.value.some(canvas => canvas.id === fileName)) {
@@ -114,6 +119,23 @@ async function ensureCanvas(fileName: string, signal?: AbortSignal, activate = f
 async function activateCanvas(fileName: string, signal?: AbortSignal) {
   if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
   await ensureCanvas(fileName, signal, true);
+}
+
+async function focusDocumentNode(directory: string, canvasPath: string, nodeId: string) {
+  if (fileActionBusy) throw new Error("工作区文件正在操作，请稍后重试");
+  checkDirectory(directory);
+  const panel = await ensureCanvas(canvasPath, undefined, true);
+  checkDirectory(directory);
+  await nextTick();
+  const node = panel.findMentionNode(nodeId);
+  if (!node) throw new Error("节点已删除，请刷新文件树");
+  if (node.hidden) throw new Error("节点已隐藏，无法在画布上聚焦");
+  const context = panel.getCanvasContext();
+  if (!context) throw new Error("画布尚未就绪");
+  await context.call({ name: "selectNodes", args: { nodeIds: [nodeId] } }, lifetime.signal);
+  const result = await context.call({ name: "fitCanvas", args: { nodeIds: [nodeId] } }, lifetime.signal) as { fitted: boolean };
+  checkDirectory(directory);
+  if (!result.fitted) throw new Error("节点尚未完成尺寸测量，请稍后重试");
 }
 
 async function mountDocumentNode(directory: string, canvasPath: string, nodeId: string, target: HTMLElement) {
@@ -169,8 +191,8 @@ async function readDocumentCanvases(directory: string, options: DocumentNodeOpti
 
 async function readDocumentNodes(directory: string, options: DocumentNodeOptions = {}): Promise<DocumentNode[]> {
   const sources = await readDocumentCanvases(directory, options);
-  return [...sources.values()].flatMap(source => source.nodes.filter(node => node.type !== "canvasGroup").map(node => ({
-    canvasPath: source.path, nodeId: node.id, nodeType: node.type,
+  return [...sources.values()].flatMap(source => source.nodes.filter(node => options.includeGroups || node.type !== "canvasGroup").map(node => ({
+    canvasPath: source.path, nodeId: node.id, nodeType: node.type, parentNode: node.parentNode,
     label: typeof node.data?.label === "string" && node.data.label.trim() ? node.data.label : node.id,
   })));
 }
@@ -343,7 +365,16 @@ function mentionInstance(canvasId: string) {
 
 const mentionSource: MentionCanvasSource = {
   currentCanvasId: () => canvasId.value,
-  canvases: () => canvases.value.map(canvas => ({ id: canvas.id, name: canvas.id.replace(/\.json$/i, "") })),
+  async canvases(signal) {
+    const directory = workspaceStore.project?.directory;
+    const panel = activeInstance.value;
+    if (!directory || !panel) return [];
+    const callSignal = AbortSignal.any([lifetime.signal, ...(signal ? [signal] : [])]);
+    const loaded = await panel.getCanvases(callSignal);
+    checkDirectory(directory);
+    callSignal.throwIfAborted();
+    return loaded.map(canvas => ({ id: canvas.id, name: canvas.id.replace(/\.json$/i, "") }));
+  },
   nodes(canvasId, options) {
     const panel = mentionInstance(canvasId);
     if (!panel) return;
@@ -372,7 +403,9 @@ const mentionSource: MentionCanvasSource = {
   },
 };
 
-defineExpose({ canvasId, canvasReady, getCanvasContext, readDocumentNode, readDocumentNodes, saveDocumentNode, mountDocumentNode, observeDocumentNode, resolveDocumentNodeFile, performFileAction, flushSave, cancelSave,
+defineExpose({ canvasId, canvasReady, canvasListReady, getCanvasContext, readDocumentNode, readDocumentNodes, focusDocumentNode, saveDocumentNode, mountDocumentNode, observeDocumentNode, resolveDocumentNodeFile, performFileAction, flushSave, cancelSave,
+  addNodeAtPointer: () => activeInstance.value?.addNodeAtPointer(),
+  openNodeSearch: () => activeInstance.value?.openNodeSearch(),
   mentionSource,
   get saveBusy() { return fileActionBusy || [...instances.values()].some(panel => panel.saveBusy); },
 });

@@ -58,7 +58,7 @@ const videoThumbnail = ref("");
 const media = computed(() => props.item.value !== undefined && (props.item.dataType === "IMAGE" || props.item.dataType === "VIDEO") ? { ...props.item.value } : undefined);
 const itemIcon = computed(() => props.item.dataType === "IMAGE" ? IconPhoto : props.item.dataType === "VIDEO" ? IconVideo : props.item.dataType === "AUDIO" ? IconMusic : IconFileText);
 const title = computed(() => {
-  const content = props.item.value === undefined ? "暂无内容" : props.item.dataType === "STRING" ? props.item.value : props.item.dataType === "VIDEO" ? "视频" : props.item.dataType === "AUDIO" ? "音频" : "图片";
+  const content = props.item.value === undefined ? "暂无内容" : props.item.dataType === "STRING" ? props.item.value : props.item.dataType === "FILE" ? props.item.value.url.split(/[\\/]/).pop() || "文件" : props.item.dataType === "VIDEO" ? "视频" : props.item.dataType === "AUDIO" ? "音频" : "图片";
   return `引用 ${props.index}：${content}${previewError.value ? `（${previewError.value}）` : ""}`;
 });
 

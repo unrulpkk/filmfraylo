@@ -299,19 +299,31 @@ export default function createWindowsUpdater(resourcesDirectory: string, lifecyc
     const readyPath = join(extractionDirectory, `update-${transactionId}.ready`);
     const helperPath = join(tmpdir(), `toonflowUpdate-${transactionId}.exe`);
     let approval: unknown;
+    let helperStarted = false;
     try {
       approval = lifecycle.requestQuitApproval();
       if (!approval) throw new Error(t`更新重启已取消`);
       installError = "";
       copyFileSync(join(resourcesDirectory, "app/updateHelper.exe"), helperPath);
-      // 等待外层 launcher 退出，避免它仍占用 app；普通 Bun 验证或无 launcher 时等待当前宿主。
-      const launcherPid = Number(process.env.ELECTROBUN_LAUNCHER_PID);
-      const parentPid = Number.isSafeInteger(launcherPid) && launcherPid > 0 && launcherPid <= 0x7fffffff ? launcherPid : process.pid;
+      // 等待最外层启动入口退出，确保兼容启动的监控进程也已释放 app 目录。
+      const parentPid = [process.env.TOONFLOW_STARTUP_PID, process.env.ELECTROBUN_LAUNCHER_PID]
+        .map(Number).find(pid => Number.isSafeInteger(pid) && pid > 0 && pid <= 0x7fffffff) ?? process.pid;
       writeAtomicSync(planPath, JSON.stringify({ schemaVersion: 1, transactionId, installDirectory, parentPid,
         identifier: localInfo.identifier, channel: localInfo.channel, ...prepared }), { exclusive: true });
       const handoffUtc = Date.now();
       const handoffStarted = performance.now();
-      await execFileAsync(helperPath, ["--spawn-update", planPath, "--quiet"], { windowsHide: true, timeout: 15000 });
+      try {
+        await execFileAsync(helperPath, ["--spawn-update", planPath, "--quiet"], { windowsHide: true, timeout: 15000, encoding: "utf8" });
+      } catch (error) {
+        const stderr = error && typeof error === "object" && "stderr" in error && typeof error.stderr === "string" ? error.stderr.trim() : "";
+        const helperError = stderr ? new Error(stderr) : error;
+        try {
+          writeAtomicSync(planPath.replace(/\.json$/, ".log"), JSON.stringify({ transactionId, timestamp: new Date().toISOString(), version: prepared.version, hash: prepared.hash,
+            error: helperError instanceof Error ? helperError.message : String(helperError) }, null, 2));
+        } catch (logError) { console.warn("更新助手启动错误日志保存失败：", logError); }
+        throw helperError;
+      }
+      helperStarted = true;
       const deadline = Date.now() + 120000;
       let quitDeadline = 0;
       while (true) {
@@ -352,7 +364,8 @@ export default function createWindowsUpdater(resourcesDirectory: string, lifecyc
       if (approval) lifecycle.cancelQuitApproval(approval);
       busy = false;
       removeUpdateFile(planPath);
-      if (approval) {
+      // ACT: 启动助手失败不使已验证的更新包失效，可直接重试；助手运行后的包校验失败仍重新下载。
+      if (approval && helperStarted) {
         removeUpdateFile(preparedPath);
         state.updateReady = false;
       }

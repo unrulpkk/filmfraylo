@@ -71,7 +71,7 @@ export default Router().post("/", validateFields(inputSchema.shape), async (req,
   try {
     const directory = input.references?.some(item => item.dataType !== "STRING")
       ? await u.workspace.resolveWorkspace(req, input.directory ?? "") : undefined;
-    const references = await u.ai.readAiReferences(directory, input.references ?? [], controller.signal);
+    const references = await u.ai.readAiReferences(directory, input.references ?? [], controller.signal, configured.provider);
     const stream = u.ai.streamAi(configured, input.context, controller.signal, references);
     res.set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" });
     res.flushHeaders();

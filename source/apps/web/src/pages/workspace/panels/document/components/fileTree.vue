@@ -42,9 +42,11 @@
           </span>
           <el-checkbox v-if="multiple" :modelValue="checkedKeys.has(row.item.key)" :disabled="row.item.type === 'node'" :aria-label="`选择 ${row.item.displayLabel || row.item.name}`" :tabindex="-1" @click.stop @change="toggleChecked(row.item)" />
           <span class="fileItem" :class="{ cutItem: isCut(data) }" :title="itemTitle(data)" @dblclick.stop="selectNode(data, false)">
-            <component v-if="data.nodeId" :is="getNodeIcon(data.nodeType) ?? IconBox" :size="16" aria-hidden="true" />
+            <icon-folder-open v-if="data.nodeType === 'canvasGroup' && expandedSet.has(data.key)" :size="16" aria-hidden="true" />
+            <icon-folder v-else-if="data.nodeType === 'canvasGroup'" :size="16" aria-hidden="true" />
+            <component v-else-if="data.nodeId" :is="getNodeIcon(data.nodeType) ?? IconBox" :size="16" aria-hidden="true" />
             <img v-else-if="itemIcon(data)" class="fileIcon" :src="itemIcon(data)" :draggable="false" alt="" />
-            <icon-layout-dashboard v-else-if="data.type === 'canvas'" :size="16" aria-hidden="true" />
+            <icon-vector v-else-if="data.type === 'canvas'" :size="16" aria-hidden="true" />
             <icon-folder-open v-else-if="data.type === 'directory' && expandedSet.has(data.key)" :size="16" aria-hidden="true" />
             <icon-folder v-else-if="data.type === 'directory'" :size="16" aria-hidden="true" />
             <icon-file v-else :size="16" aria-hidden="true" />
@@ -57,6 +59,7 @@
     <el-dropdown ref="menu" trigger="contextmenu" virtualTriggering :virtualRef="menuAnchor" placement="bottom-start" :showArrow="false" @command="command => handleCommand(command)">
       <template #dropdown>
         <el-dropdown-menu v-if="menuItem" class="fileActionMenu" :aria-label="menuItem.name">
+          <el-dropdown-item v-if="menuItem.type === 'node'" command="focusNode" :disabled="busy">在画布上聚焦</el-dropdown-item>
           <el-dropdown-item v-if="menuItem.type === 'file'" command="openWith" :disabled="busy">打开方式…</el-dropdown-item>
           <template v-if="menuItem.type !== 'node'">
             <el-dropdown-item command="newFile" :disabled="busy">新建文件…</el-dropdown-item>
@@ -69,7 +72,7 @@
           <el-dropdown-item command="copyPath" :divided="menuItem.type !== 'node'">{{ menuItem.type === 'node' ? "复制画布相对路径" : "复制路径（相对）" }}</el-dropdown-item>
           <el-dropdown-item command="copyAbsolutePath">{{ menuItem.type === 'node' ? "复制画布绝对路径" : "复制绝对路径" }}</el-dropdown-item>
           <el-dropdown-item v-if="menuItem.type !== 'node' && menuItem.path" command="rename" :disabled="busy" divided>重命名</el-dropdown-item>
-          <el-dropdown-item v-if="menuItem.path" command="delete" :disabled="busy" :divided="menuItem.type === 'node'" class="deleteAction">删除</el-dropdown-item>
+          <el-dropdown-item v-if="menuItem.path && menuItem.nodeType !== 'canvasGroup'" command="delete" :disabled="busy" :divided="menuItem.type === 'node'" class="deleteAction">删除</el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>
@@ -83,11 +86,11 @@ import type { IDockviewPanelProps } from "dockview-vue";
 import type { DropdownInstance } from "element-plus";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/vue-virtual";
-import { IconBox, IconChevronRight, IconFile, IconFilePlus, IconFileSearch, IconFocus2, IconFolder, IconFolderOpen, IconFolderPlus, IconLayoutDashboard, IconListCheck, IconLoader2, IconRefresh, IconSearch } from "@tabler/icons-vue";
+import { IconBox, IconChevronRight, IconFile, IconFilePlus, IconFileSearch, IconFocus2, IconFolder, IconFolderOpen, IconFolderPlus, IconVector, IconListCheck, IconLoader2, IconRefresh, IconSearch } from "@tabler/icons-vue";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
 import { settingsStorage } from "@/stores/settings";
 import { writeClipboardText } from "@/lib/clipboard";
-import { isMobile, isRemoteConnection } from "@/lib/mobile";
+import { isMobile, isRemoteConnection } from "@/lib/platform";
 import { t } from "@toonflow/i18n/vue";
 import { isCanvasFile } from "@/pages/workspace/canvasFile";
 import { extensionCandidates, extensionIcon, listExtensions } from "../extensions";
@@ -106,6 +109,7 @@ export type FileTreeItem = {
   isLeaf?: boolean;
   nodeId?: string;
   nodeType?: string;
+  parentKey?: string;
   displayLabel?: string;
   nodeLocations?: string[];
 };
@@ -122,6 +126,7 @@ const props = defineProps<{
     quickOpen?: () => void;
     search?: () => void;
     readNodes: (directory: string, options?: DocumentNodeOptions) => Promise<DocumentNode[]>;
+    focusNode: (directory: string, canvasPath: string, nodeId: string) => Promise<void>;
     executeFileAction: (action: FileAction, item: FileTreeItem, target?: string) => Promise<void>;
   }>;
 }>();
@@ -426,13 +431,19 @@ async function handleCommand(command: string, item = menuItem.value, source = cl
   let completed = 0;
   let total = 1;
   try {
+    if (command === "focusNode" && item.type === "node" && item.nodeId) {
+      const focusNode = props.params?.params.focusNode;
+      if (!focusNode) throw new Error("画布尚未就绪");
+      await focusNode(currentDirectory, item.path, item.nodeId);
+      return;
+    }
     if (command === "copyPath" || command === "copyAbsolutePath") {
       const separator = currentDirectory.includes("\\") ? "\\" : "/";
       const absolutePath = item.path ? currentDirectory.replace(/[\\/]+$/, "") + separator + item.path.replace(/[\\/]/g, separator) : currentDirectory;
       await writeClipboardText(command === "copyPath" ? item.path || "." : absolutePath);
       return;
     }
-    if (item.type === "node" && command !== "delete") return;
+    if (item.type === "node" && (command !== "delete" || item.nodeType === "canvasGroup")) return;
     if (command === "copy" || command === "cut") {
       const items = selectedItems(item);
       if (items.length) clipboard.value = { directory: currentDirectory, items: items.map(item => ({ ...item })), cut: command === "cut" };
@@ -518,8 +529,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function canvasItems(canvas: Record<string, unknown>, path: string): FileTreeItem[] {
   if (!Array.isArray(canvas.nodes)) return [];
-  return canvas.nodes.flatMap((node): FileTreeItem[] => {
-    if (!isRecord(node) || typeof node.id !== "string" || !node.id || node.type === "canvasGroup" || !isRecord(node.data)) return [];
+  const items = canvas.nodes.flatMap((node): FileTreeItem[] => {
+    if (!isRecord(node) || typeof node.id !== "string" || !node.id || !isRecord(node.data)) return [];
     return [{
       key: JSON.stringify(["node", path, node.id]),
       name: typeof node.data.label === "string" && node.data.label.trim() ? node.data.label : node.id,
@@ -527,9 +538,24 @@ function canvasItems(canvas: Record<string, unknown>, path: string): FileTreeIte
       type: "node",
       nodeId: node.id,
       nodeType: typeof node.type === "string" ? node.type : undefined,
-      isLeaf: true,
+      parentKey: typeof node.parentNode === "string" ? JSON.stringify(["node", path, node.parentNode]) : undefined,
+      isLeaf: node.type !== "canvasGroup",
     }];
-  }).sort((left, right) => left.name.localeCompare(right.name, "zh-CN", { numeric: true }));
+  }).sort((left, right) => Number(left.isLeaf) - Number(right.isLeaf) || left.name.localeCompare(right.name, "zh-CN", { numeric: true }));
+  const byKey = new Map(items.map(item => [item.key, item]));
+  for (const item of items) if (byKey.get(item.parentKey ?? "")?.nodeType !== "canvasGroup") item.parentKey = undefined;
+  const visited = new Set<string>();
+  for (const item of items) {
+    const ancestors = new Set<string>();
+    let current: FileTreeItem | undefined = item;
+    while (current && !visited.has(current.key)) {
+      ancestors.add(current.key);
+      if (current.parentKey && ancestors.has(current.parentKey)) current.parentKey = undefined;
+      current = byKey.get(current.parentKey ?? "");
+    }
+    for (const key of ancestors) visited.add(key);
+  }
+  return items;
 }
 
 function fileExtension(item: FileTreeItem) {
@@ -540,7 +566,8 @@ function fileExtension(item: FileTreeItem) {
 
 function selectNode(item: FileTreeItem, preview = false) {
   focusedItem.value = item;
-  if (searchTerm.value.trim() && (item.type === "directory" || item.type === "canvas")) { locateItem(item); return; }
+  if (searchTerm.value.trim() && (item.type === "directory" || item.type === "canvas" || item.nodeType === "canvasGroup")) { locateItem(item); return; }
+  if (item.nodeType === "canvasGroup") return;
   const selection: TreeSelection | undefined = item.type === "node" && item.nodeId
     ? { canvasPath: item.path, nodeId: item.nodeId, label: item.name }
     : item.type === "file" ? { filePath: item.path, label: item.name } : undefined;
@@ -586,7 +613,7 @@ function locateItem(item: FileTreeItem) {
   const parts = item.path.split("/");
   const keys = parts.slice(0, -1).map((_part, index) => JSON.stringify(["directory", parts.slice(0, index + 1).join("/")]));
   if (item.type === "node") keys.push(JSON.stringify(["canvas", item.path]));
-  if (item.type === "directory" || item.type === "canvas") keys.push(item.key);
+  if (item.type === "directory" || item.type === "canvas" || item.nodeType === "canvasGroup") keys.push(item.key);
   expandedKeys.value = [...new Set([...expandedKeys.value, ...keys])];
   locatingKey = item.key;
   searchTerm.value = "";
@@ -644,8 +671,8 @@ onBeforeUnmount(() => { clearDrag(); treeVersion.value++; searchRevision++; tree
 async function readCanvasItems(currentDirectory: string, path: string, signal: AbortSignal) {
   signal.throwIfAborted();
   if (props.params?.params.readNodes) {
-    const nodes = await props.params.params.readNodes(currentDirectory, { canvasPath: path, signal });
-    return canvasItems({ nodes: nodes.map(node => ({ id: node.nodeId, type: node.nodeType, data: { label: node.label } })) }, path);
+    const nodes = await props.params.params.readNodes(currentDirectory, { canvasPath: path, includeGroups: true, signal });
+    return canvasItems({ nodes: nodes.map(node => ({ id: node.nodeId, type: node.nodeType, parentNode: node.parentNode, data: { label: node.label } })) }, path);
   }
   const canvas = await useWorkspaceFiles(currentDirectory).readJson(path, signal);
   if (!isRecord(canvas) || canvas.toonflowCanvas !== true || !Array.isArray(canvas.nodes)) throw new Error("不是有效的画布文件");
@@ -754,7 +781,7 @@ watch([searchTerm, directory, treeVersion], ([term, currentDirectory], _previous
             try {
               const nodes = await readCanvasItems(currentDirectory, item.path, controller.signal);
               if (revision !== searchRevision) return;
-              results.push(...nodes.filter(node => `${node.name}\n${node.nodeId}\n${node.path}`.toLocaleLowerCase().includes(query)));
+              results.push(...nodes.filter(node => `${node.name}\n${node.nodeId}\n${node.path}`.toLocaleLowerCase().includes(query)).map(node => ({ ...node, isLeaf: true })));
             } catch (error) {
               controller.signal.throwIfAborted();
               if (revision === searchRevision) loadError.value = `跳过无法读取的画布“${item.path}”：${error instanceof Error ? error.message : "请检查文件"}`;
@@ -782,8 +809,20 @@ function loadChildren(item: FileTreeItem): Promise<void> {
   loadingKeys.add(item.key);
   const task = (async () => {
     try {
-      const items = await (item.type === "canvas" ? readCanvasItems(currentDirectory, path, signal) : readDirectory(currentDirectory, path, signal));
+      let items = await (item.type === "canvas" ? readCanvasItems(currentDirectory, path, signal) : readDirectory(currentDirectory, path, signal));
       if (version !== treeVersion.value || currentDirectory !== directory.value) return;
+      if (item.type === "canvas") {
+        const byKey = new Map(items.map(node => [node.key, node]));
+        for (const node of items) if (!node.isLeaf) childrenByKey.set(node.key, []);
+        for (const node of items) if (node.parentKey) childrenByKey.get(node.parentKey)!.push(node);
+        let parentKey = byKey.get(locatingKey ?? "")?.parentKey;
+        while (parentKey) {
+          if (!expandedSet.value.has(parentKey)) expandedKeys.value.push(parentKey);
+          parentKey = byKey.get(parentKey)?.parentKey;
+        }
+        if (locatingKey && byKey.has(locatingKey)) persistTreeState();
+        items = items.filter(node => !node.parentKey);
+      }
       childrenByKey.set(item.key, items);
       for (const child of items) if (expandedSet.value.has(child.key)) void loadChildren(child);
     } catch (error) {

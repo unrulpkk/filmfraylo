@@ -67,7 +67,7 @@ defineOptions({
   inheritAttrs: false,
   icon: IconFileText,
   handles: [
-    { id: "in", type: "target", dataType: ["VIDEO", "IMAGE", "STRING"], label: "视频、图片、文本输入" },
+    { id: "in", type: "target", dataType: ["VIDEO", "IMAGE", "STRING", "FILE"], label: "视频、图片、文本、文件输入" },
     { id: "text", type: "source", dataType: "STRING", label: "文本输出" },
   ] satisfies NodeHandle[],
 });
@@ -230,7 +230,7 @@ async function generateText() {
   try {
     if (refList.value.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
     const references = refList.value
-      .filter(item => item.value !== undefined && (item.dataType === "STRING" || item.dataType === "IMAGE" || item.dataType === "VIDEO"))
+      .filter(item => item.value !== undefined && (item.dataType === "STRING" || item.dataType === "IMAGE" || item.dataType === "VIDEO" || item.dataType === "FILE"))
       .map(item => item.dataType === "STRING" ? { dataType: item.dataType, value: item.value } : { dataType: item.dataType, value: { ...item.value } });
     const input = { providerId: choice.providerId, modelId: choice.modelId, prompt: prompt.value.trim(), references };
     const directory = references.some(item => item.dataType !== "STRING") ? (await textFiles.list()).directory : undefined;

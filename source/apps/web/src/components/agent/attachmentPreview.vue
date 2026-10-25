@@ -1,5 +1,5 @@
 <template>
-  <div class="thumbnailItem" :class="{ textAttachment: isText }">
+  <div class="thumbnailItem" :class="{ fileAttachment: !isMedia }">
     <template v-if="isText">
       <button class="textAttachmentButton" type="button" :title="attachment.name" :aria-label="`预览 ${attachment.name}`" @click="textPreviewVisible = true">
         <icon-file-text :size="18" />
@@ -24,10 +24,11 @@
       @keydown.space.prevent="imageRef?.showPreview()">
       <template #error><icon-photo :size="20" /></template>
     </el-image>
-    <button v-else class="thumbnailButton" type="button" :title="attachment.name" :aria-label="`预览 ${attachment.name}`" :disabled="!thumbnailUrl" @click="videoPreviewVisible = true">
+    <button v-else-if="attachment.mimeType.startsWith('video/')" class="thumbnailButton" type="button" :title="attachment.name" :aria-label="`预览 ${attachment.name}`" :disabled="!thumbnailUrl" @click="videoPreviewVisible = true">
       <video v-if="thumbnailUrl" :src="thumbnailUrl" preload="metadata" muted playsinline aria-hidden="true" />
       <icon-video class="videoIcon" :size="16" />
     </button>
+    <div v-else class="fileAttachmentCard" :title="attachment.name"><icon-file-text :size="18" /><span>{{ attachment.name }}</span></div>
     <el-button v-if="removable" class="removeAttachment" circle :disabled="disabled" :aria-label="`移除 ${attachment.name}`" title="移除附件" @click="emit('remove')"><icon-x :size="10" /></el-button>
     <el-dialog v-model="videoPreviewVisible" :title="attachment.name" width="min(800px, 90vw)" alignCenter appendToBody destroyOnClose>
       <video v-if="videoPreviewVisible" class="videoPreview" :src="thumbnailUrl" controls playsinline preload="metadata" />
@@ -50,6 +51,7 @@ import { readTextAttachment } from "./textAttachments";
 const props = defineProps<{ attachment: AgentAttachment; directory?: string; removable?: boolean; restorable?: boolean; disabled?: boolean }>();
 const emit = defineEmits<{ remove: []; restore: [] }>();
 const isText = computed(() => props.attachment.mimeType === "text/plain");
+const isMedia = computed(() => /^(image|video)\//.test(props.attachment.mimeType));
 const textPreviewVisible = ref(false);
 const textContent = ref("");
 const textLoading = ref(false);
@@ -61,7 +63,7 @@ const thumbnailUrl = ref("");
 watch(() => [props.directory, props.attachment.file, props.attachment.path, props.attachment.mimeType] as const, async ([directory, file, path, mimeType], _previous, onCleanup) => {
   videoPreviewVisible.value = false;
   thumbnailUrl.value = "";
-  if (mimeType === "text/plain") return;
+  if (!/^(image|video)\//.test(mimeType)) return;
   let cancelled = false;
   let release = () => {};
   onCleanup(() => { cancelled = true; release(); });
@@ -107,7 +109,7 @@ watch([textPreviewVisible, () => props.attachment, () => props.directory], async
   width: 38px;
   height: 38px;
 
-  &.textAttachment {
+  &.fileAttachment {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -119,7 +121,8 @@ watch([textPreviewVisible, () => props.attachment, () => props.directory], async
     border-radius: 8px;
     background: var(--el-fill-color-extra-light);
 
-    .textAttachmentButton {
+    .textAttachmentButton,
+    .fileAttachmentCard {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -130,7 +133,7 @@ watch([textPreviewVisible, () => props.attachment, () => props.directory], async
       color: var(--el-text-color-primary);
       font: inherit;
       font-size: 12px;
-      cursor: pointer;
+      &.textAttachmentButton { cursor: pointer; }
 
       svg { flex-shrink: 0; color: var(--el-color-primary); }
       span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

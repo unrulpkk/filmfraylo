@@ -28,6 +28,7 @@ internal static class updateHelper
     [STAThread]
     private static int Main(string[] args)
     {
+        Console.SetError(new StreamWriter(Console.OpenStandardError(), new UTF8Encoding(false)) { AutoFlush = true });
         string root = null, transaction = null, version = null, hash = null, planPath = null;
         bool quiet = Array.IndexOf(args, "--quiet") >= 0;
         Mutex mutex = null;
@@ -43,7 +44,6 @@ internal static class updateHelper
                 spawnScheduledUpdate(Process.GetCurrentProcess().MainModule.FileName, planPath, quiet);
                 return 0;
             }
-            if (args[0] == "--apply-scheduled-update") scheduledTaskFolder().DeleteTask(scheduledTaskName(planPath), 0);
             var plan = readJson(planPath);
             if (plan.Count != 9 || number(plan, "schemaVersion") != 1)
                 throw new InvalidOperationException("更新计划格式不受支持。");
@@ -88,7 +88,9 @@ internal static class updateHelper
             {
                 // 保持句柄，避免 PID 复用；仅等待当前安装的宿主，不终止其他进程。
                 IntPtr parentHandle = parent.Handle;
-                if (parent.HasExited || !inside(parent.MainModule.FileName, Path.Combine(root, "app", "bin")))
+                string parentPath = parent.MainModule.FileName;
+                if (parent.HasExited || (!inside(parentPath, Path.Combine(root, "app", "bin"))
+                    && !samePath(parentPath, Path.Combine(root, "app", "Resources", "app", "startupLauncher.exe"))))
                     throw new InvalidOperationException("父进程不属于当前 Toonflow 安装。");
                 using (var sha = SHA256.Create())
                     if (!String.Equals(BitConverter.ToString(sha.ComputeHash(archiveStream)).Replace("-", ""), expectedDigest, StringComparison.OrdinalIgnoreCase))
@@ -139,6 +141,22 @@ internal static class updateHelper
         }
         finally
         {
+            // ACT: 无触发器的一次性任务清理失败不能撤销更新；保留任务到结束也能阻止同一任务重复启动。
+            if (planPath != null && args[0] == "--apply-scheduled-update")
+            {
+                try { deleteScheduledTask(planPath); }
+                catch (Exception error)
+                {
+                    string detail = "更新任务清理失败（HRESULT=0x" + error.HResult.ToString("X8") + "）：" + error.Message;
+                    try { Console.Error.WriteLine(detail); }
+                    catch { /* 宿主可能已关闭 stderr 管道，诊断不能改变更新结果。 */ }
+                    if (root != null)
+                    {
+                        try { writeFile(Path.ChangeExtension(planPath, ".cleanup.log"), detail); }
+                        catch { /* 日志不可写也不能覆盖原始结果或阻止释放安装锁。 */ }
+                    }
+                }
+            }
             if (locked) mutex.ReleaseMutex();
             if (mutex != null) mutex.Dispose();
         }
@@ -151,52 +169,77 @@ internal static class updateHelper
         return "ToonflowUpdate_" + name.Substring(7).ToLowerInvariant();
     }
 
-    private static dynamic scheduledTaskFolder()
+    private static void deleteScheduledTask(string planPath)
     {
         dynamic scheduler = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service", true));
         scheduler.Connect();
-        return scheduler.GetFolder("\\");
+        dynamic folder = scheduler.GetFolder("\\");
+        try
+        {
+            folder.DeleteTask(scheduledTaskName(planPath), 0);
+        }
+        catch (Exception error)
+        {
+            if (error.HResult != unchecked((int)0x80070002)) throw;
+        }
     }
 
     private static void spawnScheduledUpdate(string executable, string planPath, bool quiet)
     {
-        // ACT: breakaway 成功仍可能留在外层 Job，统一由当前用户的任务服务启动；不提权、不设置触发器，启动后删除任务。
+        // ACT: breakaway 成功仍可能留在外层 Job，统一由当前用户的任务服务启动；不提权、不设置触发器。
         string taskName = scheduledTaskName(planPath);
-        dynamic scheduler = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service", true));
-        scheduler.Connect();
-        dynamic folder = scheduler.GetFolder("\\");
-        dynamic task = scheduler.NewTask(0);
-        task.Principal.UserId = WindowsIdentity.GetCurrent().User.Value;
-        task.Principal.LogonType = 3; // TASK_LOGON_INTERACTIVE_TOKEN
-        task.Principal.RunLevel = 0; // TASK_RUNLEVEL_LUA
-        task.Settings.AllowDemandStart = true;
-        task.Settings.DisallowStartIfOnBatteries = false;
-        task.Settings.StopIfGoingOnBatteries = false;
-        task.Settings.ExecutionTimeLimit = "PT15M";
-        task.Settings.Hidden = true;
-        dynamic action = task.Actions.Create(0);
-        action.Path = executable;
-        action.Arguments = "--apply-scheduled-update " + quote(planPath) + (quiet ? " --quiet" : "");
-        action.WorkingDirectory = Path.GetDirectoryName(executable);
+        string stage = "identity", sid = "unknown";
+        bool administratorToken = false;
         bool created = false;
         try
         {
+            using (var identity = WindowsIdentity.GetCurrent())
+            {
+                sid = identity.User.Value;
+                administratorToken = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            stage = "createService";
+            dynamic scheduler = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service", true));
+            stage = "connect";
+            scheduler.Connect();
+            stage = "getFolder";
+            dynamic folder = scheduler.GetFolder("\\");
+            stage = "configureTask";
+            dynamic task = scheduler.NewTask(0);
+            task.Principal.UserId = sid;
+            task.Principal.LogonType = 3; // TASK_LOGON_INTERACTIVE_TOKEN
+            task.Principal.RunLevel = 0; // TASK_RUNLEVEL_LUA
+            task.Settings.AllowDemandStart = true;
+            task.Settings.DisallowStartIfOnBatteries = false;
+            task.Settings.StopIfGoingOnBatteries = false;
+            task.Settings.ExecutionTimeLimit = "PT15M";
+            task.Settings.Hidden = true;
+            task.Settings.MultipleInstances = 2; // TASK_INSTANCES_IGNORE_NEW
+            dynamic action = task.Actions.Create(0);
+            action.Path = executable;
+            action.Arguments = "--apply-scheduled-update " + quote(planPath) + (quiet ? " --quiet" : "");
+            action.WorkingDirectory = Path.GetDirectoryName(executable);
+            stage = "registerTask";
             dynamic registered = folder.RegisterTaskDefinition(taskName, task, 2, task.Principal.UserId, null, 3, null);
             created = true;
+            stage = "runTask";
             registered.Run(null);
         }
         catch (Exception error)
         {
+            string detail = "无法通过当前用户的任务服务启动更新助手（stage=" + stage
+                + ", HRESULT=0x" + error.HResult.ToString("X8") + ", task=" + taskName + ", SID=" + sid
+                + ", administratorToken=" + administratorToken + "）：" + error.Message;
             if (created)
             {
-                try { folder.DeleteTask(taskName, 0); }
-                catch (COMException cleanupError)
+                try { deleteScheduledTask(planPath); }
+                catch (Exception cleanupError)
                 {
-                    if (cleanupError.ErrorCode != unchecked((int)0x80070002))
-                        throw new InvalidOperationException(error.Message + "\n更新任务清理失败：" + cleanupError.Message, error);
+                    detail += "\n更新任务清理失败（HRESULT=0x" + cleanupError.HResult.ToString("X8") + "）：" + cleanupError.Message;
                 }
             }
-            throw new InvalidOperationException("无法通过当前用户的任务服务启动更新助手：" + error.Message, error);
+            // Run 报错也可能已被服务接收；由宿主撤销原计划，不在这里盲目重发或改用普通子进程。
+            throw new InvalidOperationException(detail, error);
         }
     }
 
@@ -262,7 +305,10 @@ internal static class updateHelper
     private static void startApp(string root, string transaction, string version, string hash, out Process process)
     {
         process = null;
-        string launcher = Path.Combine(root, "app", "bin", "launcher.exe");
+        string bin = Path.Combine(root, "app", "bin");
+        string launcher = Path.Combine(root, "app", "Resources", "app", "startupLauncher.exe");
+        if (!File.Exists(launcher)) launcher = Path.Combine(bin, "launcher.exe");
+        ensurePlainPath(launcher);
         string startedPath = transaction == null ? null : Path.Combine(root, "self-extraction", "update-" + transaction + ".started.json");
         if (startedPath != null)
         {
@@ -271,10 +317,10 @@ internal static class updateHelper
         }
         var options = new ProcessStartInfo(launcher)
         {
-            WorkingDirectory = Path.GetDirectoryName(launcher),
+            WorkingDirectory = bin,
             UseShellExecute = false,
             CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
+            WindowStyle = ProcessWindowStyle.Normal
         };
         options.EnvironmentVariables.Remove("TOONFLOW_UPDATE_TRANSACTION");
         if (transaction != null) options.EnvironmentVariables["TOONFLOW_UPDATE_TRANSACTION"] = transaction;
@@ -311,7 +357,7 @@ internal static class updateHelper
 
     private static void stopApp(Process process)
     {
-        // ACT: 已退出的 launcher 由 SDK Job 清理子进程；残余占用交由有界 Move 失败保护备份，不按名称终止其他实例。
+        // ACT: 仅终止本次启动的进程树；已退出时的残余占用交由有界 Move 失败保护备份，不按名称终止其他实例。
         if (!process.HasExited)
         {
             string taskkill = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32", "taskkill.exe");

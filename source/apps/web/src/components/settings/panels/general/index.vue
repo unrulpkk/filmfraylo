@@ -60,6 +60,7 @@
         </div>
       </div>
     </section>
+    <nodeMenuSettings />
     <canvasShortcuts />
   </div>
 </template>
@@ -67,6 +68,7 @@
 <script setup lang="ts">
 import { defaultUiSettings, generalSettings, uiSettings, updateGeneralSettings, updateUiSettings } from "@/stores/settings";
 import canvasShortcuts from "./canvasShortcuts.vue";
+import nodeMenuSettings from "./nodeMenuSettings.vue";
 </script>
 
 <style lang="scss" scoped>

@@ -190,6 +190,7 @@
       </div>
       <template #footer>
         <el-button size="small" @click="resultVisible = false">关闭</el-button>
+        <el-button v-if="updateError && !snapshot?.installFailure && !updateInProgress" tag="a" size="small" :href="`${repositoryUrl}/releases/latest`" target="_blank" rel="noopener noreferrer">前往下载页</el-button>
         <el-button v-if="snapshot?.installFailure" tag="a" type="primary" size="small" :href="snapshot.installFailure.downloadUrl" target="_blank" rel="noopener noreferrer">前往下载页</el-button>
         <el-button v-else-if="snapshot?.updating && !working" size="small" type="primary" @click="runUpdate('read')">重新读取状态</el-button>
         <el-button
@@ -211,7 +212,7 @@ import { translate, t } from "@toonflow/i18n/vue";
 import { computed, defineAsyncComponent, onMounted, onBeforeUnmount, ref } from "vue";
 import axios from "axios";
 import { ElMessage } from "element-plus";
-import { isMobile, isRemoteConnection } from "@/lib/mobile";
+import { isMobile, isDesktop, isRemoteConnection } from "@/lib/platform";
 import { QRCode } from "tdesign-vue-next";
 import {
   IconRefresh,
@@ -243,7 +244,6 @@ import {
 const messageMarkdown = defineAsyncComponent(() => import("@/components/messageMarkdown.vue"));
 const repositoryUrl = "https://github.com/HBAI-Ltd/Toonflow-app";
 const communityUrl = "https://work.weixin.qq.com/u/vc36adcc89845edcbe?v=5.0.3.63936&bb=85b8d228e8";
-const isDesktop = new URLSearchParams(window.location.search).get("desktop") === "1";
 const clientBuild = ref<{ version: string; channel: string }>();
 const currentVersion = computed(() => isDesktop && isRemoteConnection
   ? clientBuild.value?.version || "" : snapshot.value?.version || import.meta.env.appVersion);
