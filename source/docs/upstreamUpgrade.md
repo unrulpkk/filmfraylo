@@ -1,6 +1,6 @@
-# FilmFraylo 2.0.3 上游升级记录
+# FilmFraylo 2.0.5 上游升级记录
 
-日期：2026-10-26。此次将 Toonflow 基线从 `2c7fb257affb65777110fe4c6e60cd3c09187d9b` 升级到 `30139c931e80476caa718b31684b86383c6e83ce`，采用独立工作树三方合并。FilmFraylo 版本为 2.0.3，未向远端推送或发布。
+日期：2026-10-26。此次将 Toonflow 基线从 `2c7fb257affb65777110fe4c6e60cd3c09187d9b` 升级到 `30139c931e80476caa718b31684b86383c6e83ce`，采用独立工作树三方合并。升级代码已合入 GitHub `main`；此次正式发布版本为 2.0.5，由 `v2.0.5` 标签触发发布构建。初次本地验证包使用 2.0.3，不能与先前发布的同名版本混淆。
 
 ## 合并与定制边界
 
@@ -32,6 +32,7 @@
 - 节点接口加载 10 个节点，无加载错误；包括新增 `frameAnalysisNode` 和原有预置 `webEpisodeEditorProNode`。
 - 浏览器验证首次配置入口、FilmFraylo 标题与标识、中英文版权文案；缺少 Key 时直接访问首页仍返回首次配置页。
 - 翻译入口实际输出 FilmFraylo 文案，传入的用户原文参数保持原样。
+- 修复 hoisted 依赖布局的许可收集和 Intel Mac 原生 SDK 准备步骤后，主分支的 Windows x64、macOS Intel / Apple Silicon 桌面及 Web 包均已通过 [GitHub Actions 构建](https://github.com/unrulpkk/filmfraylo/actions/runs/40322965648)。正式发行包使用 2.0.5 版本号重新构建。
 
 验证只使用本次独立数据目录，未读取或覆盖真实项目和密钥。没有真实 API Key，未执行付费图片、视频、配音生成；未完成已有真实项目的完整创作回归。macOS、移动端实机、麦克风权限、外部 MCP 服务连接和更新安装/回滚实机流程仍需按发行平台验收。Windows 构建和安装包生成不等同于这些功能已通过实机验收。
 
