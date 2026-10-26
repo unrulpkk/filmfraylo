@@ -367,7 +367,7 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
     const requestedType = z.enum(["text", "image", "video", "audio"]).safeParse(modelsUrl.searchParams.get("type"));
     return result.data.flatMap(({ modelInfo, ...model }) => {
       const id = model.id.trim();
-      const previous = provider.models.find(item => item.id === id)
+      let previous = provider.models.find(item => item.id === id)
         ?? (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === id)
         ?? (provider.id === tfRouter.id ? tfRouter.models.find(item => item.id === id) : undefined);
       let type = model.type ?? (requestedType.success ? requestedType.data : previous?.type);
@@ -379,13 +379,15 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
           unsupportedModels.push(id);
           return [];
         }
-        return [{ ...supported }];
+        if (model.type !== undefined && model.type !== supported.type) invalid(t`模型 ${id} 的 type 与已接入协议不一致`);
+        previous ??= supported;
+        type = supported.type;
       }
       if (!type) invalid(t`模型 ${id} 缺少 type，请在返回数据或 modelsUrl 的 type 参数中指定`);
       if (requestedType.success && type !== requestedType.data) invalid(t`模型 ${id} 的 type 与请求类型不一致`);
       // ACT: modelInfo 覆盖已有能力；缺省字段沿用同名配置，新模型不猜测生成能力。
-      const merged = { ...previous, ...model, ...modelInfo, id, label: model.label ?? previous?.label
-        ?? (typeof model.display_name === "string" ? model.display_name : typeof model.displayName === "string" ? model.displayName : id), type };
+      const merged = { ...previous, ...model, ...modelInfo, id, label: model.label
+        ?? (typeof model.display_name === "string" ? model.display_name : typeof model.displayName === "string" ? model.displayName : previous?.label ?? id), type };
       Reflect.deleteProperty(merged, "modelInfo");
       return [merged];
     });

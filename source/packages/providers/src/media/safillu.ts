@@ -196,10 +196,10 @@ export default {
   id: "safillu",
   label: "Safillu AI",
   icon: "",
-  version: "1.2.0",
+  version: "1.3.0",
   modelsUrl: "https://api.safillu.com/v1/models",
   readme:
-    "支持 Z-Image 与 Qwen 文生图、Qwen 三图编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。模型列表可从当前站点同步；成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
+    "支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
   rules,
   models: [
     {
@@ -220,9 +220,9 @@ export default {
     },
     {
       id: "Qwen-Image-2.1-Edit",
-      label: "Qwen Image 2.1 · 三图编辑",
+      label: "Qwen Image 2.1 · 图片编辑",
       type: "image",
-      mode: ["multiReference"],
+      mode: ["singleImage", "multiReference"],
       imageSizes: ["1K", "2K"],
       imageRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"],
     },
@@ -242,27 +242,27 @@ export default {
     const body = {
       model: request.model,
       prompt: text(request.prompt, "图片提示词", 12000),
-      ratio: request.ratio ?? "1:1",
-      resolution: (request.size ?? "1K").toUpperCase(),
+      ratio: text(request.ratio ?? "1:1", "图片比例", 64),
+      resolution: text(request.size ?? "1K", "图片分辨率", 64),
       seed: seed(request),
     };
-    if (!["1K", "2K"].includes(body.resolution) || !["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"].includes(body.ratio))
-      throw new Error("图片分辨率或比例无效");
+    const negativePrompt = request.other?.negativePrompt;
+    if (negativePrompt !== undefined && (typeof negativePrompt !== "string" || negativePrompt.length > 12000))
+      throw new Error("负向提示词须为不超过 12000 字符的字符串");
+    if (request.n !== undefined && (!Number.isInteger(request.n) || request.n < 1 || request.n > 4)) throw new Error("生图数量须为 1–4 的整数");
     let result: Task & { task_id: string };
     if (request.model === "Qwen-Image-2.1-Edit") {
-      if (request.other?.negativePrompt !== undefined) throw new Error("Qwen 图片编辑不支持负向提示词");
-      if (request.images?.length !== 3) throw new Error("Qwen 图片编辑需要恰好三张参考图片");
-      if (request.n !== undefined && request.n !== 1) throw new Error("Qwen 图片编辑每次生成一张图片");
+      if (!request.images?.length) throw new Error("Qwen 图片编辑至少需要一张原图");
       const images = request.images.map((input) => base64(input, "image"));
       if (images.reduce((total, image) => total + image.bytes, 0) > 64 * 1024 * 1024) throw new Error("参考图片合计不能超过 64 MiB");
-      result = await generate(this, "edit", { ...body, images: images.map((image) => image.url) });
+      // ACT: 同一编辑协议的业务参数由线上接口校验，客户端不固定参考图数量或输出规格。
+      result = await generate(this, "edit", { ...body, images: images.map((image) => image.url), n: request.n, negative_prompt: negativePrompt });
     } else if (request.model === "Z-Image-Base" || request.model === "Qwen-Image-2.1") {
+      body.resolution = body.resolution.toUpperCase();
+      if (!["1K", "2K"].includes(body.resolution) || !["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"].includes(body.ratio))
+        throw new Error("图片分辨率或比例无效");
       if (request.images?.length) throw new Error("该模型仅支持文生图，请移除参考图片");
       const n = request.n ?? 1;
-      if (!Number.isInteger(n) || n < 1 || n > 4) throw new Error("生图数量须为 1–4 的整数");
-      const negativePrompt = request.other?.negativePrompt;
-      if (negativePrompt !== undefined && (typeof negativePrompt !== "string" || negativePrompt.length > 12000))
-        throw new Error("负向提示词须为不超过 12000 字符的字符串");
       result = await generate(this, request.model === "Z-Image-Base" ? "image" : "qwenImage", { ...body, n, negative_prompt: negativePrompt });
     } else {
       throw new Error("该图片模型尚未接入，请更新 safillu 适配器");
