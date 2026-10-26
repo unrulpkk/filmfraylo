@@ -1,6 +1,6 @@
 import { $ } from "bun";
 import { cp, mkdir, readFile, writeFile } from "@toonflow/file";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import config from "../../../appConfig";
 
@@ -24,10 +24,9 @@ const unpacked = resolve(root, "build/desktop/releasePayload.tar");
 await writeFile(unpacked, Bun.zstdDecompressSync(await readFile(payload)));
 await $`tar -xf ${unpacked} --strip-components=1 -C ${app}`;
 const resources = resolve(app, mac ? "Contents/Resources/app" : "Resources/app");
-await writeFile(resolve(resources, "buildInfo.json"), JSON.stringify({ product: "FilmFraylo", mode: "desktop",
-  version: config.app.version, platform, commit: process.env.GITHUB_SHA ?? null,
-  repository: process.env.GITHUB_REPOSITORY ?? null, runId: process.env.GITHUB_RUN_ID ?? null }, null, 2));
-await cp(resolve(root, "LICENSE"), resolve(resources, "license.txt"));
+const buildInfo = JSON.parse(await readFile(resolve(resources, "buildInfo.json"), "utf8"));
+if (buildInfo.product !== "FilmFraylo" || buildInfo.version !== config.app.version || buildInfo.platform !== platform)
+  throw new Error("Native update payload build information mismatch");
 await cp(resolve(root, "docs/desktopPackage.md"), resolve(stage, "readme.md"));
 if (!mac) {
   await mkdir(resolve(stage, "data"));
@@ -39,4 +38,12 @@ const archive = resolve(root, "dist", `${name}.${mac ? "dmg" : "zip"}`);
 if (mac) await $`hdiutil create -volname FilmFraylo -srcfolder ${stage} -ov -format UDZO ${archive}`;
 else await $`tar -a -cf ${archive} -C ${resolve(root, "dist")} ${name}`;
 await writeFile(`${archive}.sha256`, `${createHash("sha256").update(await readFile(archive)).digest("hex")}  ${name}.${mac ? "dmg" : "zip"}\n`);
+// 首次安装包与原生更新清单一起发布，GitHub 可直接作为 SDK 的完整更新源。
+const updateArchive = resolve(root, "dist", basename(payload));
+await cp(payload, updateArchive);
+const updateHash = createHash("sha256").update(await readFile(updateArchive)).digest("hex");
+await writeFile(`${updateArchive}.sha256`, `${updateHash}  ${basename(payload)}\n`);
+const updateManifest = resolve(root, "dist", `${prefix}-update.json`);
+await writeFile(updateManifest, JSON.stringify({ ...manifest, ...(manifest.artifact ? { artifact: { ...manifest.artifact, sha256: updateHash } } : {}) }, null, 2));
+await writeFile(`${updateManifest}.sha256`, `${createHash("sha256").update(await readFile(updateManifest)).digest("hex")}  ${basename(updateManifest)}\n`);
 console.log(`Native desktop package: ${archive}`);

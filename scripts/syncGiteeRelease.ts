@@ -149,7 +149,7 @@ async function main() {
   const hashes = new Map<string, string>();
   const checksumBytes = new Map<string, Uint8Array<ArrayBuffer>>();
   for (const asset of selectedAssets) {
-    if (!/\.(zip|dmg|exe)(\.sha256)?$/.test(asset.name)) throw new Error(`Unsupported release attachment: ${asset.name}`);
+    if (!/(\.(zip|dmg|exe|tar\.zst)|-update\.json)(\.sha256)?$/.test(asset.name)) throw new Error(`Unsupported release attachment: ${asset.name}`);
     if (!asset.name.endsWith(".sha256")) continue;
     if (asset.size > 4096) throw new Error(`Invalid SHA256 file size: ${asset.name}`);
     const bytes = await download("github", `${githubPath}/releases/assets/${asset.id}`, asset);

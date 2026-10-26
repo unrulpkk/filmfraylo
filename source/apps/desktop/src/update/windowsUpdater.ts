@@ -40,7 +40,7 @@ export default function createWindowsUpdater(resourcesDirectory: string, lifecyc
   // ACT: Electrobun 在 Worker 中加载应用，环境变量区分大小写，不能只读取 WINDIR。
   const tarExecutable = join(process.env.SystemRoot ?? process.env.windir ?? process.env.WINDIR!, "System32", "tar.exe");
   let localInfo: versionInfo;
-  let manifest: { version: string; hash: string; artifact: { file: string } } | undefined;
+  let manifest: { version: string; hash: string; artifact: { file: string; sha256?: string } } | undefined;
   let busy = false;
   let applyingTransaction = "";
   let pendingQuitApproval: unknown;
@@ -174,7 +174,8 @@ export default function createWindowsUpdater(resourcesDirectory: string, lifecyc
       const next = JSON.parse(new TextDecoder().decode(Buffer.concat(chunks, size)));
       if (!next || next.schemaVersion !== 1 || next.identifier !== info.identifier || next.channel !== info.channel || next.platform !== "win" || next.arch !== "x64"
         || typeof next.version !== "string" || !versionPattern.test(next.version) || typeof next.hash !== "string" || !hashPattern.test(next.hash) || typeof next.artifact?.file !== "string"
-        || !next.artifact.file.startsWith(`${info.channel}-win-x64-`) || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.tar\.zst$/.test(next.artifact.file)) throw new Error(t`更新清单不匹配当前应用`);
+        || !next.artifact.file.startsWith(`${info.channel}-win-x64-`) || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.tar\.zst$/.test(next.artifact.file)
+        || (next.artifact.sha256 !== undefined && !/^[a-f0-9]{64}$/.test(next.artifact.sha256))) throw new Error(t`更新清单不匹配当前应用`);
       if (Bun.semver.order(next.version, info.version) < 0) throw new Error(t`更新源版本 ${next.version} 早于当前版本 ${info.version}，已阻止降级`);
       manifest = next;
       const prepared = readPrepared();
@@ -260,6 +261,11 @@ export default function createWindowsUpdater(resourcesDirectory: string, lifecyc
       if (!usedPatch) {
         const compressedPath = temporaryFile(".tar.zst");
         await download(target.artifact.file, compressedPath);
+        if (target.artifact.sha256) {
+          const digest = createHash("sha256");
+          for await (const chunk of file(compressedPath).stream()) digest.update(chunk);
+          if (digest.digest("hex") !== target.artifact.sha256) throw new Error(t`更新包 SHA256 校验失败`);
+        }
         archivePath = temporaryFile(".tar");
         await execFileAsync(join(installDirectory, "app/bin/zig-zstd.exe"), ["decompress", "-i", compressedPath, "-o", archivePath, "--no-timing"], { windowsHide: true, timeout: 10 * 60_000 });
       }

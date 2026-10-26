@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, shallowRef, watch, watchEffect } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch, watchEffect } from "vue";
 import { ElMessage, useZIndex } from "element-plus";
 import { elementLocales } from "@toonflow/i18n/elementPlus";
 import { ConfigProvider, type GlobalConfigProvider } from "tdesign-vue-next";
@@ -54,9 +54,9 @@ import tdesignAr from "tdesign-vue-next/es/locale/ar_KW";
 import { locale } from "@toonflow/i18n/vue";
 import type { updateSnapshot } from "@toonflow/server/desktop";
 import { chatLocale } from "@/lib/i18n";
-import { isMobile, isDesktop } from "@/lib/platform";
+import { isMobile, isDesktop, isRemoteConnection } from "@/lib/platform";
 import { saveSettings, settings, uiSettings } from "@/stores/settings";
-import { desktopUpdateSnapshot, stopDesktopUpdateObservation } from "@/stores/desktopUpdate";
+import { checkDesktopUpdate, desktopUpdateSnapshot, stopDesktopUpdateObservation } from "@/stores/desktopUpdate";
 import { useWorkspaceStore } from "@/stores/workspace";
 import loadingPage from "@/components/loadingPage.vue";
 import { useMcpControl } from "@/lib/mcpControl";
@@ -66,6 +66,9 @@ import "element-plus/theme-chalk/dark/css-vars.css";
 
 useMcpControl();
 const workspaceStore = useWorkspaceStore();
+onMounted(() => {
+  if (isDesktop && !isRemoteConnection) void checkDesktopUpdate(true).catch(() => {});
+});
 
 // ACT: TDesign 缺少的语言使用英语基底，聊天控件由应用字典补齐。
 const tdesignLocales = {

@@ -4,6 +4,10 @@
 
 ## 从旧版本接入
 
+2.0.7 起，桌面客户端在启动时自动检查本产品的 GitHub 正式发布；有新版本时设置入口显示提示。用户可在「设置 → 关于 → 版本更新」点击「下载更新」，下载期间继续创作，完成后保存工作并选择「重启并更新」。下载和解压校验在后台完成，不强制中断工作；程序重启后核对目标版本，保留原项目、配置与旧程序备份。完整安装包和应用内更新包由同一标签构建发布。
+
+2.0.5 / 2.0.6 的关于页没有此入口，需先用下面的 Skill 更新流程升级一次到 2.0.7 或更高正式版。只同步模型不会升级客户端，也不必为了后续每次应用更新重新下载整个 Skill。
+
 2.0.3 等旧版的首次安装脚本会跳过已安装程序。先安装正式 Release 中包含 `scripts/updateClient.js` 的完整新版 Skill 包：WorkBuddy 使用 `filmFrayloWorkbuddy.zip`，其他宿主使用 `filmFrayloSkills.zip`。核对同版 SHA256；保留用户修改的 Skill 和 `references/localRuntime.md`，有冲突时比较合并，不静默覆盖。只有 main 源码更新、没有正式包时，明确说明升级入口尚未发布，不让用户反复运行旧安装命令。
 
 更新前从本机启动入口、现有 MCP 配置和实际安装确定 **程序位置与原数据目录**。Windows 标准安装为 `~/.filmfraylo/desktop`，macOS 为 `~/Applications/FilmFraylo.app` 或已有的 `/Applications/FilmFraylo.app`；不能因为默认路径不存在就另装一份。通过 MCP 配置 `--runtime` 路径的父目录或本机启动命令的 `--data` 获取实际数据目录，不回显 runtime 的 token 或设置中的 Key。存在多个实例时先确认用户要更新哪一个。

@@ -32,6 +32,8 @@ git push -u origin main
 
 ## 发布版本
 
+2.0.7 起，Release 同时包含各平台的原生 `stable-*-update.json` 更新清单、对应 `.tar.zst` 程序包及 SHA256 文件。桌面端默认使用本产品 GitHub `releases/latest/download`，启动自动检查，在「设置 → 关于」后台下载并由用户选择重启安装。程序身份和构建信息在 SDK 归档及签名前写入，完整 ZIP / DMG 与原生更新使用同一份程序。发布时必须保留这些附件，只有 ZIP / DMG 无法供应用内更新使用。
+
 ```powershell
 git tag v2.0.0
 git push origin v2.0.0

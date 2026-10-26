@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { file } from "@toonflow/file/bun";
 import type { Request } from "express";
 import conf from "@/utils/conf";
+import { product } from "@toonflow/product";
 import type { DesktopRuntime, desktopUpdateAttempt, updateSnapshot } from "@/types/desktop";
 
 const updateRuntimeId = crypto.randomUUID();
@@ -55,7 +56,7 @@ function getInstallFailure(local: Awaited<ReturnType<DesktopRuntime["updater"]["
     currentVersion: local.version,
     currentHash: local.hash,
     message,
-    downloadUrl: "",
+    downloadUrl: `${product.repositoryUrl}/releases/latest`,
   };
 }
 
@@ -77,10 +78,10 @@ export function isValidUpdateUrl(value: unknown): value is string {
   return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password && !url.search && !url.hash;
 }
 
-function getUpdateBaseUrl(): string {
+function getUpdateBaseUrl(defaultUrl: string): string {
   const settings = conf.get("settings", {});
   if (settings.desktopUpdateSource === "custom" && isValidUpdateUrl(settings.desktopUpdateCustomUrl)) return settings.desktopUpdateCustomUrl;
-  return "";
+  return isValidUpdateUrl(defaultUrl) ? defaultUrl : `${product.repositoryUrl}/releases/latest/download`;
 }
 
 async function withUpdateSource<T>(updater: DesktopRuntime["updater"], updateBaseUrl: string, run: () => Promise<T>) {
@@ -93,6 +94,12 @@ async function withUpdateSource<T>(updater: DesktopRuntime["updater"], updateBas
   } finally {
     info.baseUrl = baseUrl;
   }
+}
+
+function downloadBaseUrl(baseUrl: string, version?: string) {
+  // 下载和安装固定到已检查的 Release，避免期间 latest 切换造成清单与程序包不一致。
+  return baseUrl.replace(/\/+$/, "") === `${product.repositoryUrl}/releases/latest/download` && version && /^\d+\.\d+\.\d+$/.test(version)
+    ? `${product.repositoryUrl}/releases/download/v${version}` : baseUrl;
 }
 
 async function assertUpdateVersion(updater: DesktopRuntime["updater"], state: DesktopState) {
@@ -137,7 +144,7 @@ export async function getDesktopUpdate(req: Request): Promise<updateSnapshot> {
   const { version, channel, hash } = local;
   // ACT: Intel 1.18.1 首次检查前没有状态，旧清单也可能缺少状态字段。
   const update = updater.updateInfo();
-  const updateBaseUrl = getUpdateBaseUrl();
+  const updateBaseUrl = getUpdateBaseUrl(local.baseUrl);
   const validUpdate = !!updateBaseUrl && state.checkedBaseUrl === updateBaseUrl;
   const applyError = state.applyingUpdate && state.updateHandoffComplete ? update?.error : undefined;
   const installFailure = getInstallFailure(local, applyError);
@@ -161,12 +168,11 @@ export async function getDesktopUpdate(req: Request): Promise<updateSnapshot> {
 export async function checkDesktopUpdate(req: Request): Promise<void> {
   const { updater } = getDesktopRuntime(req);
   const state = getDesktopState(req);
-  if (!getUpdateBaseUrl()) throw Object.assign(new Error("当前版本未配置更新源。"), { status: 400 });
   if (state.checkingUpdate || state.downloadingUpdate || state.applyingUpdate)
     throw Object.assign(new Error("更新操作正在执行，请稍后再试。"), { status: 409 });
   state.checkingUpdate = true;
   state.updateError = "";
-  const updateBaseUrl = getUpdateBaseUrl();
+  const updateBaseUrl = getUpdateBaseUrl((await updater.getLocalInfo()).baseUrl);
   state.checkedBaseUrl = undefined;
   state.lastBaseUrl = updateBaseUrl;
   try {
@@ -189,7 +195,7 @@ export async function downloadDesktopUpdate(req: Request): Promise<void> {
     throw Object.assign(new Error("当前客户端不支持应用内更新，请下载安装包。"), { status: 400 });
   if (state.checkingUpdate || state.downloadingUpdate || state.applyingUpdate)
     throw Object.assign(new Error("更新操作正在执行，请稍后再试。"), { status: 409 });
-  const updateBaseUrl = getUpdateBaseUrl();
+  const updateBaseUrl = getUpdateBaseUrl((await updater.getLocalInfo()).baseUrl);
   if (!updateBaseUrl || state.checkedBaseUrl !== updateBaseUrl)
     throw Object.assign(new Error("更新源已切换，请重新检查更新。"), { status: 400 });
   if (!updater.updateInfo()?.updateAvailable)
@@ -213,7 +219,7 @@ export async function downloadDesktopUpdate(req: Request): Promise<void> {
         state.updateProgress = { ...state.updateProgress, phase: "preparing", received: state.updateProgress?.received ?? 0 };
       }
     });
-    await withUpdateSource(updater, updateBaseUrl, () => updater.downloadUpdate!());
+    await withUpdateSource(updater, downloadBaseUrl(updateBaseUrl, updater.updateInfo()?.version), () => updater.downloadUpdate!());
     const update = updater.updateInfo();
     if (update?.error || !update?.updateReady) throw new Error(update?.error || "更新包尚未准备完成，请重试。");
     await assertUpdateVersion(updater, state);
@@ -234,7 +240,7 @@ export async function applyDesktopUpdate(req: Request): Promise<void> {
     throw Object.assign(new Error("当前客户端不支持应用内更新，请下载安装包。"), { status: 400 });
   if (state.checkingUpdate || state.downloadingUpdate || state.applyingUpdate)
     throw Object.assign(new Error("更新操作正在执行，请稍后再试。"), { status: 409 });
-  const updateBaseUrl = getUpdateBaseUrl();
+  const updateBaseUrl = getUpdateBaseUrl((await updater.getLocalInfo()).baseUrl);
   if (!updateBaseUrl || state.checkedBaseUrl !== updateBaseUrl)
     throw Object.assign(new Error("更新源已切换，请重新检查更新。"), { status: 400 });
   if (!updater.updateInfo()?.updateReady)
@@ -251,7 +257,7 @@ export async function applyDesktopUpdate(req: Request): Promise<void> {
     attempt = { attemptId: crypto.randomUUID(), runtimeId: updateRuntimeId, channel: local.channel, targetVersion: target.version, targetHash: target.hash };
     // ACT: SDK 可能直接退出进程，必须在交接前写入 app 外的数据目录。
     conf.set("desktopUpdateAttempt", attempt);
-    await withUpdateSource(updater, updateBaseUrl, () => updater.applyUpdate!());
+    await withUpdateSource(updater, downloadBaseUrl(updateBaseUrl, target.version), () => updater.applyUpdate!());
     const error = updater.updateInfo()?.error;
     if (error) throw new Error(error);
     state.updateHandoffComplete = true;

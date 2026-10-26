@@ -8,6 +8,8 @@ export default {
     bun: { entrypoint: "generated/src/index.ts", minify: true, external: ["@silvia-odwyer/photon-node", "@firecrawl/anydoc", "@firecrawl/anydoc-wasm"] },
     copy: {
       "../../build/desktop/harness/desktopHarness.js": "desktopHarness.js",
+      "../../build/desktop/harness/buildInfo.json": "buildInfo.json",
+      "../../LICENSE": "license.txt",
       "../../build/desktop/photon": "bun/node_modules/@silvia-odwyer/photon-node",
       "../../build/desktop/node_modules/@firecrawl": "bun/node_modules/@firecrawl",
       "../../build/mcp": "mcp",

@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdirSync, realpathSync, rmSync, writeAtomicSync } 
 import { dirname, resolve } from "node:path";
 import copyDocumentPackages from "../../server/scripts/copyDocumentPackages";
 import prepareMacDmg from "./macDmg";
+import appConfig from "../../../appConfig";
 
 const projectDir = resolve(import.meta.dir, "../../..");
 const mode = process.argv[2];
@@ -23,6 +24,13 @@ if (!(isMac && ["x64", "arm64"].includes(process.arch)) && !(process.platform ==
 const harnessBuild = await Bun.build({ entrypoints: [resolve(import.meta.dir, "desktopHarness.ts")],
   outdir: resolve(projectDir, "build/desktop/harness"), target: "bun", minify: true });
 if (!harnessBuild.success) throw new AggregateError(harnessBuild.logs, "Desktop harness build failed.");
+// 元数据在 SDK 归档和签名前写入，应用内更新与首次安装使用同一份程序内容。
+writeAtomicSync(resolve(projectDir, "build/desktop/harness/buildInfo.json"), JSON.stringify({
+  product: product.name, mode: "desktop", version: appConfig.app.version,
+  platform: `${isMac ? "macos" : "windows"}-${process.arch}`,
+  commit: process.env.GITHUB_SHA ?? null, repository: process.env.GITHUB_REPOSITORY ?? null,
+  runId: process.env.GITHUB_RUN_ID ?? null,
+}, null, 2));
 if (mode === "dev") process.env.TOONFLOW_DATA_DIR = resolve(projectDir, "data");
 if (isMac) {
   const startupTarget = isIntelMac ? "macX64" : "macArm64";

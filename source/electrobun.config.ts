@@ -17,6 +17,8 @@ export default {
     bun: { entrypoint: "apps/desktop/src/index.ts", minify: true, external: ["@silvia-odwyer/photon-node", "@firecrawl/anydoc", "@firecrawl/anydoc-wasm"] },
     copy: {
       "build/desktop/harness/desktopHarness.js": "desktopHarness.js",
+      "build/desktop/harness/buildInfo.json": "buildInfo.json",
+      "LICENSE": "license.txt",
       "build/desktop/node_modules/@firecrawl": "bun/node_modules/@firecrawl",
       "build/desktop/photon": "bun/node_modules/@silvia-odwyer/photon-node",
       ...(process.platform === "win32" ? {
@@ -55,7 +57,7 @@ export default {
   },
   release: {
     // 发行更新地址由本产品构建环境显式提供。
-    baseUrl: process.env.FILMFRAYLO_UPDATE_BASE_URL || process.env.SAFILLU_UPDATE_BASE_URL || "",
+    baseUrl: process.env.FILMFRAYLO_UPDATE_BASE_URL || process.env.SAFILLU_UPDATE_BASE_URL || `${product.repositoryUrl}/releases/latest/download`,
     // ACT: 常规构建不访问更新服务器；release:desktop 显式开启增量构建。
     generatePatch: process.env.generateUpdatePatch === "1",
   },
