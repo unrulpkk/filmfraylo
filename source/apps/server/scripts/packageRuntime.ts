@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, readdir, writeFile } from "@toonflow/file";
+import { cp, existsSync, mkdir, readFile, readdir, realpath, writeFile } from "@toonflow/file";
 import { resolve, join } from "node:path";
 import config from "../../../appConfig";
 
@@ -17,23 +17,39 @@ export async function packageRuntime(output: string, platform: string, readme: s
   await writeFile(resolve(output, "package.json"), JSON.stringify({ name: "filmfraylo-local", private: true, type: "module" }, null, 2));
   // 随运行环境与依赖分发许可文本，固定到实际使用的 Bun 版本。
   let notices = `Bun ${Bun.version}\nSource: https://github.com/oven-sh/bun/tree/bun-v${Bun.version}\n${await readFile(resolve(root, "docs/bunLicense.txt"), "utf8")}\n`;
-  const bunModules = resolve(root, "node_modules/.bun");
-  for (const entry of await readdir(bunModules, { withFileTypes: true })) {
-    if (!entry.isDirectory() || entry.name === "node_modules") continue;
-    const modules = join(bunModules, entry.name, "node_modules");
-    for (const child of await readdir(modules, { withFileTypes: true })) {
-      if (!child.isDirectory()) continue;
-      const packages = child.name.startsWith("@")
-        ? (await readdir(join(modules, child.name))).map(name => join(modules, child.name, name))
-        : [join(modules, child.name)];
-      for (const directory of packages) {
-        for (const file of await readdir(directory, { withFileTypes: true })) {
-          if (file.isFile() && /^(license|licence|notice|copying)(\.|$)/i.test(file.name))
-            notices += `\n--- ${entry.name} / ${child.name} / ${file.name} ---\n${await readFile(join(directory, file.name), "utf8")}\n`;
+  const visited = new Set<string>();
+  // ACT: 同时遍历 hoisted 和 isolated 布局；按实际路径去重，避免工作区链接循环。
+  async function collectNotices(directory: string, modules = false): Promise<void> {
+    const actual = await realpath(directory);
+    if (visited.has(actual)) return;
+    visited.add(actual);
+    const entries = await readdir(actual, { withFileTypes: true });
+    if (modules) {
+      for (const entry of entries) {
+        if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+        const child = join(actual, entry.name);
+        if (entry.name === ".bun") {
+          for (const store of await readdir(child, { withFileTypes: true })) {
+            const nested = join(child, store.name, "node_modules");
+            if (store.isDirectory() && existsSync(nested)) await collectNotices(nested, true);
+          }
+        } else if (!entry.name.startsWith(".")) {
+          await collectNotices(child, entry.name.startsWith("@"));
         }
       }
+      return;
     }
+    const metadata = join(actual, "package.json");
+    if (!existsSync(metadata)) return;
+    const { name, version } = JSON.parse(await readFile(metadata, "utf8"));
+    for (const file of entries) {
+      if (file.isFile() && /^(license|licence|notice|copying)(\.|$)/i.test(file.name))
+        notices += `\n--- ${name}@${version} / ${file.name} ---\n${await readFile(join(actual, file.name), "utf8")}\n`;
+    }
+    const nested = join(actual, "node_modules");
+    if (existsSync(nested)) await collectNotices(nested, true);
   }
+  await collectNotices(resolve(root, "node_modules"), true);
   await writeFile(resolve(output, "thirdPartyNotices.txt"), notices);
   await writeFile(resolve(output, "buildInfo.json"), JSON.stringify({
     product: "FilmFraylo", mode: "web", version, platform, bun: Bun.version,

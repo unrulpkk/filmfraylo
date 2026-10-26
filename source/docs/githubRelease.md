@@ -77,7 +77,7 @@ bun run package:desktopRelease
 bun run package:windows
 ```
 
-`package:desktopRelease` 复用原生 Electrobun 桌面构建，Windows ZIP 内的 `app/bin/launcher.exe` 打开独立窗口，macOS 生成真正 App 的 DMG。`package:windows` / `package:mac` 另行构建可选 Web 包；Windows Web 包使用 start.cmd，不再生成浏览器 EXE 启动器。输出目录已存在时拒绝覆盖，请换版本或保留旧目录。Mac 需先执行 `bun packages/startup/scripts/buildMac.ts`；Intel 还需在 `compat/macIntel` 安装锁定依赖。GitHub Actions 已包含这些步骤。
+`package:desktopRelease` 复用原生 Electrobun 桌面构建，Windows ZIP 内的 `app/bin/launcher.exe` 打开独立窗口，macOS 生成真正 App 的 DMG。`package:windows` / `package:mac` 另行构建可选 Web 包；Windows Web 包使用 start.cmd，不再生成浏览器 EXE 启动器。输出目录已存在时拒绝覆盖，请换版本或保留旧目录。Mac 需先执行 `bun packages/startup/scripts/buildMac.ts`；Intel 还需在 `compat/macIntel` 安装锁定依赖，再显式运行 `bun compat/macIntel/prepareNative.ts` 准备最低支持 macOS 13 的原生 SDK。GitHub Actions 已包含这些步骤。
 
 运行包只复制指定构建目录，不复制 `.env`、用户数据或工作区。Skill 安装的桌面版默认将数据保存到 `~/.filmfraylo/desktopData`；检测到安装目录旁已有 `data/settings.json` 时沿用。Web 版遵从其启动入口保存的数据目录。用户工作区独立于安装目录，升级时保留。
 

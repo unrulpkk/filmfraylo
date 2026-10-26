@@ -59,7 +59,12 @@ jobs:
       - name: Prepare Mac desktop dependencies
         if: runner.os == 'macOS'
         run: |
-          if ('${{ matrix.platform }}' -eq 'macos-x64') { bun install --frozen-lockfile --cwd compat/macIntel }
+          if ('${{ matrix.platform }}' -eq 'macos-x64') {
+            bun install --frozen-lockfile --cwd compat/macIntel
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            bun compat/macIntel/prepareNative.ts
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           bun packages/startup/scripts/buildMac.ts
       - name: Build desktop package
         run: bun run package:desktopRelease
