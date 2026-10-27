@@ -56,14 +56,14 @@
         <div class="promptFooter">
           <el-select
             v-if="editor?.mode !== 'inpaint'"
-            v-model="data.model"
+            v-model="selectedModelValue"
             class="modelSelect"
             filterable
             :loading="modelsLoading"
             :disabled="generating || deleting"
-            placeholder="选择模型"
-            aria-label="生成模型"
-            noDataText="请先在设置中添加图片模型"
+            :placeholder="imageReferenceCount ? '选择编辑模型' : '选择生成模型'"
+            :aria-label="imageReferenceCount ? '编辑模型' : '生成模型'"
+            :noDataText="imageReferenceCount ? '暂无支持当前参考图的编辑模型' : '暂无支持文生图的模型，请在设置中添加'"
             placement="top-start"
             @visible-change="(visible) => visible && loadModels().catch((error) => showNodeError(error, '模型读取失败'))">
             <template #prefix><icon-sparkles :size="17" /></template>
@@ -177,7 +177,20 @@ const generationState = useNodeGeneration(outputs, () => generationController?.a
 const { generating } = generationState;
 let generation: Promise<void> | undefined;
 let modelsRequest: Promise<void> | undefined;
-const selectedModel = computed(() => models.value.find((item) => JSON.stringify([item.providerId, item.modelId]) === data.value.model));
+const imageReferenceCount = computed(() => {
+  const inpaint = data.value.inpaint;
+  return (inpaint ? 2 + (inpaint.images?.length ?? 0) : 0) + refList.value.filter(item =>
+    item.dataType === "IMAGE" && (!inpaint || item.value?.url !== inpaint.source)
+  ).length;
+});
+const matchingModels = computed(() => models.value.filter(item => {
+  const modes = item.mode ?? [];
+  return imageReferenceCount.value === 0 ? modes.includes("text")
+    : modes.includes("multiReference") || imageReferenceCount.value === 1 && modes.includes("singleImage");
+}));
+const selectedModel = computed(() => matchingModels.value.find((item) => JSON.stringify([item.providerId, item.modelId]) === data.value.model));
+// ACT: 引用变化时隐藏不适用的旧选择，保留配置供撤销恢复；不自动换模型发起生成。
+const selectedModelValue = computed({ get: () => selectedModel.value ? data.value.model : "", set: value => { data.value.model = value; } });
 const sizeOptions = computed(() => (selectedModel.value?.imageSizes?.length ? selectedModel.value.imageSizes : ["2K"]));
 const ratioOptions = computed(() => (selectedModel.value?.imageRatios?.length ? selectedModel.value.imageRatios : ["16:9"]));
 watch(
@@ -192,7 +205,7 @@ watch(
   },
   { flush: "sync" }
 );
-const modelGroups = computed(() => groupNodeModels(models.value));
+const modelGroups = computed(() => groupNodeModels(matchingModels.value));
 const generationPrompt = computed(() =>
   [
     (editor.value?.mode === "inpaint" ? data.value.inpaintPrompt : data.value.prompt).trim(),
@@ -293,7 +306,7 @@ function loadModels() {
     models.value = items.filter((item) => item.type === "image");
     // ACT: 只给空配置选默认模型，保留暂时不可用的旧选择及其参数。
     if (!data.value.model) {
-      const first = models.value.find(item => item.providerId === "safillu") ?? models.value[0];
+      const first = matchingModels.value.find(item => item.providerId === "safillu") ?? matchingModels.value[0];
       data.value.model = first ? JSON.stringify([first.providerId, first.modelId]) : "";
     }
   }).finally(() => {
@@ -329,7 +342,7 @@ async function startGeneration() {
   if (!generationPrompt.value) throw new Error("请输入生成提示词");
   const references = refList.value.filter(item => !data.value.inpaint || item.dataType !== "IMAGE" || item.value?.url !== data.value.inpaint.source);
   if (references.some(item => item.value === undefined)) throw new Error("引用节点暂无内容，请先补充引用内容");
-  if (!input) throw new Error("请先选择图片模型");
+  if (!input) throw new Error(imageReferenceCount.value ? "请先选择支持当前参考图的编辑模型" : "请先选择文生图模型");
   const workspace = files.getWorkspaceFiles();
   const controller = new AbortController();
   const inpaintData = data.value.inpaint;
@@ -412,13 +425,13 @@ function getConfig() {
       size: data.value.size,
       ratio: data.value.ratio,
     },
-    models: models.value,
+    models: matchingModels.value,
   };
 }
 
 nodeTools.register({
   name: "getConfig",
-  description: "读取此图片生成节点的当前模型、分辨率、比例及可选图片模型能力，不含密钥；未声明分辨率或比例时分别使用 2K、16:9",
+  description: "读取此图片节点的模型、分辨率、比例及匹配当前参考图数量的可选模型；编辑图片先接入参考图再查询，不含密钥；未声明分辨率或比例时分别使用 2K、16:9",
   parameters: z.strictObject({}),
   async execute(_args, { signal }) {
     signal?.throwIfAborted();
@@ -444,7 +457,7 @@ nodeTools.register({
     signal?.throwIfAborted();
     if (generating.value || deleting.value) throw new Error("节点正在生成或删除，请稍后修改配置");
     const choice = args.modelId === undefined ? selectedModel.value
-      : models.value.find((item) => item.providerId === args.providerId && item.modelId === args.modelId);
+      : matchingModels.value.find((item) => item.providerId === args.providerId && item.modelId === args.modelId);
     if (!choice) throw new Error("请选择 getConfig 返回的有效图片模型");
     const sizes = choice.imageSizes?.length ? choice.imageSizes : ["2K"];
     const ratios = choice.imageRatios?.length ? choice.imageRatios : ["16:9"];
