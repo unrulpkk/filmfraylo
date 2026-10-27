@@ -56,6 +56,8 @@ WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，�
 
 ## 选择当前阶段
 
+视频制作先通过官方应用操作 `listMediaProviders` 读取当前供应商列表，筛选 `type: "video"`；已有目标节点时再用 `getNodeTools` 和节点的 `node:getConfig` 核对当前可选模型及模式、时长、分辨率和声音能力。按官方 MCP Skill 先发现操作 schema，不猜测调用参数。模型出现在列表中不代表 Key、余额或调用权限已验证；读取失败或未配置时报告实际缺项，不用记忆中的型号补选项。用户已指定的模型先核实；未指定时，只从实际支持本次输入与规格的模型中推荐或询问，有唯一匹配项时说明选择并沿用现有授权。**模型确认后才进入对应提示词规则；workflow 中的 Seedance PART A 仅适用于已选择 Seedance 的任务，不能把所有视频任务默认归为 Seedance 或预设询问“2.0 还是 2.5”。**
+
 这是一个 Skill 的五个制作阶段，不是五个独立 Skill。当前 Harness 根据任务和 productionState.md 按需读取对应参考文档，已确认的成果直接接续；用户只需调用 filmfraylo 技能，无需切换入口。调用语法使用当前宿主支持的方式。
 
 | 任务 | 阶段参考 | 主要交付 |
