@@ -1,137 +1,68 @@
-# MiniMax H3 官方格式规范与词表
+# H3 格式与约束
 
-整合自 MiniMax H3 官方手册、官方提示词指南及社区实测。正文叙述用中文写（H3 的 Qwen3-VL 32B 编码器原生支持中英双语，中文稳定可读）；仅字段名、镜头结构、运镜动词、保留词、说话人标签等格式元素保留英文；台词、歌词、屏幕文字保留原语言（用英文双引号引住）。
+## 模式选择
 
-## 模型规格速查
+| 模式 | 输入条件 | 规划方向 |
+| --- | --- | --- |
+| T2VA | 无媒体素材 | 根据文字组织视听过程 |
+| I2VA | 一张明确作为实际首帧的图片 | 保留开场构图，再向后发展 |
+| FL2VA | 明确首帧与尾帧各一张 | 写清两帧之间的自然变化 |
+| L2VA | 一张明确作为实际尾帧的图片 | 从合理前态收敛到目标结束画面 |
+| Ref2VA | 作为内容/属性/声音参考的图片、视频、音频 | 定义每份素材实际负责的内容 |
 
-| 项 | 值 |
-|---|---|
-| 模型 | 33B dense single-stream Omni Transformer（API ID: MiniMax-H3，即 Hailuo 3.0） |
-| 分辨率 | 768P 或 2K（2K = 短边 1440px，如 2560×1440）。无 1080P 档、无 4K |
-| 时长 | 4–15 整数秒，默认 5（部分平台下限 5） |
-| 帧率 / 音频 | 24fps 固定；音频 32kHz 立体声，与画面同一遍生成 |
-| 画幅 | adaptive、21:9、16:9、4:3、1:1、3:4、9:16；纯文生必须给具体比例 |
-| 参考上限 | 9 图 + 3 视频 + 3 音频，单次最多 12 个文件；音频不能是唯一参考 |
-| 模式互斥 | I2VA 与 reference 模式互斥；FL2VA 只用两图锚点 |
-| 音频语言 | 稳定支持 11 种：中、英、法、德、意、日、韩、葡、俄、西、阿拉伯 |
-| 提示词上限 | 7000 字符/条 |
-| 参数面 | 提示词层无 seed、无 negative prompt、无 guidance/step（CFG-distilled），散文否定有效；本地 ComfyUI 工作流的 seed/采样器/LoRA 等属节点级参数，不进提示词正文 |
+普通图片不自动触发 I2VA；仅有尾帧不伪装成首帧。Base 不混入额外素材。首尾帧与其它参考并用时须核对实际通道是否支持；通道只支持参考模式时不能承诺像素级首尾锁定。素材数量、角色和手动模式冲突时指出具体冲突，不忽略素材继续生成。
 
-## Base 三字段格式
+官方通用边界：目标 4–15 秒；图片最多 9 张，视频最多 3 段，音频最多 3 段，混合总计最多 12 个文件。每段视频/音频 2–15 秒，视频总时长及音频总时长分别不超过 15 秒。网关可进一步收紧；分辨率、整数时长档、画幅、单图/首尾帧/混合参考、是否支持原生声音，以当前模型实际能力为准。不要把某个渠道的限制或未经核实的 7000 字符上限当作所有 H3 模型的硬限制。
 
-```
-integrated_multimodal_description: [Shot 1] 风格与初始构图。主体外貌/位置/动作/运镜。说话人 (S1) 与 <d>[语言] 台词</d>。[Shot 2] At 00:SS.mmm, 镜头切到新信息。
-overall_soundscape: 环境声、物理动作声、非语言人声。
-non_diegetic_music: 乐器、节奏、动态变化，或 N/A。
-```
+时长未知时先用宿主可用的元数据能力读取或请用户提供真实时长；元数据不等于识别媒体内容。仅写通用 prompt、无法读取实时渠道能力时说明“渠道能力未核验”，保留通用规划，不虚构可执行配置。
 
-### 各 Base 任务首行对齐指令（句式保留英文，含义用中文说明）
+## Base 输出
 
-- **T2VA**：无对齐行，直接开始。
-- **I2VA**：首行 `For the target video, at 0.00 seconds, <Picture 1> from [Shot 1] is fully referenced.`（目标视频 0.00 秒完全参考 <Picture 1>）——锚定风格/身份/服装/构图/空间后写连续发展。
-- **FL2VA**：`Picture 1 from [Shot 1] aligns to 0.00 seconds; Picture 2 from the actual final [Shot N] aligns to the exact S.SS-second end time.`（首帧对 0 秒、尾帧对精确结束时间）——写两帧间姿势/物体状态/构图/光照/运镜的可见变化路径。
-- **L2VA**：`<Picture 1> from the actual final [Shot N] aligns to the exact S.SS-second end time.`（仅终帧锚定）——推断合理前态，一切变化收敛到终帧。
+严格依次使用：
+1. integrated_multimodal_description
+2. overall_soundscape
+3. non_diegetic_music
 
-## Full-Reference 六字段格式
-
-按顺序写完整六个 section，删掉不用的标签但**不删 required section**。
-
-```
-subject_definitions:
-<Subject 1> 是 [可复用视觉内容]，来自 <Picture 1>，保留 [身份特征]。
-<Video 1> 承担 [编辑/延续/结构角色]（如适用）。
-<Audio 1> 为 <Subject 1> (S1) 提供 [copy/reference 角色]（如适用）。
-
-summary:
-[任务类型标签 + 主要参考关系，一段话]
-
-retention_analysis:
-[每个视觉/音频参考如何被保留/迁移/复制/松散跟随]
-
-detailed_description:
-[逐镜头按播放顺序；在参考标签生效处插入 <Subject N>/<Picture N>/<Video N>/<Audio N>]
-
-overall_soundscape:
-[环境声与物理动作声，含音频复制/参考关系]
-
-non_diegetic_music:
-[配乐及与参考音频的关系，或 N/A]
+T2VA 直接从字段开始。I2VA 首行固定：
+```text
+For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.
 ```
 
-### 参考标签语义
-
-| 标签 | 含义 |
-|---|---|
-| `<Subject N>` | 从资产中提取的可复用内容单位：人、物、场景、服装、道具、界面、风格、动作、姿势、效果。描述的是"用进目标片的内容"，不是上传文件本身 |
-| `<Picture N>` | 图片本身作为具体首帧/关键帧/尾帧/编辑关键帧/构图锚点/分镜方案 |
-| `<Video N>` | 源视频整体被直接编辑/延续，或提供全局镜头/剪辑/节奏/计时结构；**也可承担纯动作/姿态迁移角色**（见下方"动作迁移句式"） |
-| `<Audio N>` | 被积极使用的音频信号：整段/部分复制，或参考音色/音乐/词/效果/节拍/节奏/连贯性 |
-
-判定规则：
-- 图片只定义角色/产品/场景/服装/风格 → 在 Subject 定义里引图，不单列 Picture。
-- 只有图片本身锚定某帧或提供明确分镜/构图时才单列 Picture。
-- 视频承担整体结构角色（编辑/延续/剪辑结构/运镜路径/节奏/计时）才单列 Video。
-- 音频有主动复制/参考角色才定义；视频带声不等于要 Audio 标签。
-- 一个 Subject 可同时组合：图给外观 + 视频给动作 + 音频给音色，逐个说明来源贡献。
-
-### 动作迁移句式（外观与动作分离）
-
-姿态控制无独立参数，全靠参考语义。**身份取图、动作取视频**，reference 模式显式声明（句式保留英文）：
-
-```
-Use Image 1 for the subject's appearance and identity.
-Use Video 1 for the body movement only.
-The subject from Image 1 performs the same movement as Video 1,
-in a plain studio with soft even lighting, full body in frame.
+FL2VA 首行固定：
+```text
+How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot N) aligns with the S.SS-second mark of the target video.
 ```
 
-- 不写"body movement only"，H3 可能把参考视频的角色外观一起搬来。
-- `retention_analysis` 用 `attribute_transfer` 声明动作迁移：`Video 1 的身体动作、节奏与走位被 attribute_transfer 到 <Subject 1>，保留表演时序但不复制画面。`（语义级跟随，非骨骼级锁定；骨骼级走工作流 Fun ControlNet）
-- 旋转/复杂运镜锁不住背景时，在提示词内声明中间帧锚定：`At 00:05.000, the composition aligns to <Picture 2>.` 时间戳递增、不超总时长。
+L2VA 首行固定：
+```text
+How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark of the target video.
+```
 
-### 任务类型标签（summary 用，可 + 组合）
+N 必须替换为实际最终镜头编号，S.SS 替换为有效总时长且保留两位小数；对齐行与字段间空一行。FL2VA 按首帧、尾帧确定 Picture 1/2 的实际素材顺序，不能只改文字编号。不要把尾帧默认写成属于 Shot 1；单镜头时最终镜头确实可以是 Shot 1。
 
-`keyframe completion`（图是精确帧锚点）/ `reference generation`（资产引导但不直接编辑延续）/ `video editing`（源视频被直接修改）/ `video continuation`（从源视频续写扩展）/ `audio reuse`（整段/部分复制同一音频信号）/ `audio reference`（只跟音色/词/节拍不复制）。
+I2VA 的开场承接首帧；FL2VA 重点写中间运动而非重复两张静态描述，默认保持连续，仅用户明确需要时切镜；L2VA 必须描述实际到达尾帧的过程。不要把示例中的 N、S.SS 等模板变量留在交付文本。
 
-### 保留词表（retention_analysis）
+## 官方 Ref2VA 输出
 
-视觉：`fully_preserved`（列具体不变特征）/ `partially_preserved`（写明改了哪部分）/ `attribute_transfer`（迁移动作/风格/姿势/构图/效果到不同目标主体）/ `weak_reference`（仅类别/氛围/构图家族相似）。
-音频：`fully_copy`（整段复制为最终轨）/ `partially_copy`（复制部分时间范围或层，或增删改替换）/ `reference`（跟音色/节拍/音乐风格/词/质感，不复制信号）/ `weak_reference`。
+开始撰写 Ref2VA 成品前读取 [English final output contract](refFormat.md)，按其中英文规则直接交付，不将下列中文字段释义当作成品语言或内容。
 
-## 运镜词表（写进句子，不用括号）
+严格依次使用：
+1. subject_definitions：素材用途、可复用主体与必要的明确声音绑定。
+2. summary：以真实任务类型方括号开头，简要描述目标与参考关系。
+3. retention_analysis：逐项说明实际保留、变化、属性迁移或信号复用。
+4. detailed_description：按播放顺序写真实画面、动作、运镜、声音和参考生效点。
+5. overall_soundscape：跨片段的环境声、物理声和非语言声音。
+6. non_diegetic_music：明确要求的非画内配乐；未要求时 N/A。
 
-| 意图 | 词汇 | 变化 |
-|---|---|---|
-| 变焦（机身不动） | Zoom In / Zoom Out | 焦距变化 |
-| 纵深移动 | Push In / Pull Out | 机身向主体靠近/远离 |
-| 水平移动 | Truck Left / Truck Right | 机身整体横移 |
-| 垂直移动 | Pedestal Up / Pedestal Down | 机身升降 |
-| 原地旋转 | Pan Left / Pan Right / Tilt Up / Tilt Down | 机身不动、镜头水平/垂直旋转 |
-| 环绕 | Arc Shot | 沿曲线路径绕主体 |
-| 跟随 | Tracking Shot | 随运动主体并保持关系 |
-| 主观视角 | POV | 采用主体所见 |
-| 轴向旋转 | Roll Clockwise / Roll Counterclockwise | 绕镜头轴旋转 |
-| 不稳定 | Shake Slightly / Shake Strongly | 受控抖动 |
-| 静止 | Static Shot | 位置与镜头不动（H3 默认漂移，锁帧必写） |
+summary 的任务类型按用途选 reference generation、keyframe completion、video editing、video continuation、audio reuse、audio reference，多种用 + 连接。参考视频只提供运镜不自动成为 video editing；直接编辑/续接原视频时才使用对应类型。信号复制与风格/音色参考不同。
 
-幅度：`with small amplitude`（克制、保构图）/ `with large amplitude`（揭示更多空间或重构构图）/ 中幅省略。
-速度：`at slow speed`（缓慢、有时间检查细节）/ `at fast speed`（快速揭示或有力过渡）/ 常速省略。
+## 时间、对白和声音
 
-## 说话人与对白标签
-
-- 说话人按发声顺序编号 (S1)、(S2)、…，后续镜头复用同一 ID。
-- 说话人身份、语气、动作写在标签外。
-- `<d>` 内只放语言标签 + 精确原文，如 `<d>[Chinese] 别怕，我不碰你。</d>`。
-- V.O.：声明 off-screen，可见角色嘴唇闭合。
-- `<scenetrans>`：一句话跨镜头延续时用；`<cutoff>`：视频在中段截断时用。
-- 多角色共说：`(S1,S2)`。
-- 屏幕文字：英文双引号引住原文，不翻译不改写，如 `红色霓虹灯牌写着 "OPEN"`。
-
-## 常见失败模式（官方手册点名的）
-
-1. 所有内容揉成一团无分段段落——三块/六块结构必拆。
-2. 提示词过短（纯文生低于"外貌+场景+动作+风格"下限）。
-3. 抽象隐喻词替代画面直述（写"都市忧郁氛围"不如写"雨夜霓虹在她皮衣上的反光"）。
-4. 屏幕文字要求与画面不符或要求翻译。
-5. 要配乐又写 `non_diegetic_music: N/A`（自相矛盾）。
-6. 描述结局先于开始（打乱时间轴）。
+- 开头 [Shot 1] 不附切镜时间；后续写 [Shot N] At MM:SS.mmm, ...，编号连续、切点严格递增，全部落在目标时长内。最终状态与总时长精确对应；不添加结尾之后的新动作。
+- 运镜写入英文自然句，说明必要的方向、幅度与速度；平移机身和原地摇镜不是同一种运动。只因景别变化不必切镜。
+- 说话者以首次实际发声顺序编号 (S1)、(S2)；始终未发声的角色不编号。声音身份、动作和语气写在 <d> 外，块内只放 [Language] 与用户的原始台词/歌词。保留每个原字与标点。
+- 画外音用 says in an off-screen voiceover，随该段明确对应可见角色嘴唇保持闭合；不凭空要求其它没有对白的角色全程闭嘴、禁止呼吸或限制正常表情。
+- 同一句跨切镜时在接续处用 <scenetrans> 并说明声音不断；仅当原定视频确实截断声音时用 <cutoff>。不能为了短时长擅自截断用户完整台词。
+- 画面必须出现的文字用英文双引号包住原文，不翻译或改写。
+- 环境声与同步声按明确场景合理安排，不强加未要求的声源；overall_soundscape 只有用户明确要求整片完全静音才用 N/A。未要求配乐时 non_diegetic_music 用 N/A；画内乐器/收音机声音属于时间线。
+- 拟声、动作声音、对白、画内音乐与背景配乐不能混为一项，也不机械重复同一句台词。

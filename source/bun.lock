@@ -532,25 +532,6 @@
         "vue": "^3.5.42",
       },
     },
-    "packages/nodes/minimaxH3Prompt": {
-      "name": "@toonflow/node-minimax-h3-prompt",
-      "version": "1.0.0",
-      "dependencies": {
-        "@tabler/icons-vue": "^3.46.0",
-      },
-      "devDependencies": {
-        "@toonflow/node-shared": "workspace:*",
-        "@toonflow/nodes-scaffold": "workspace:*",
-        "typescript": "~6.0.3",
-        "vite": "^8.2.2",
-        "vue-tsc": "^3.3.11",
-      },
-      "peerDependencies": {
-        "@vue-flow/core": "^1.48.2",
-        "element-plus": "^2.14.5",
-        "vue": "^3.5.42",
-      },
-    },
     "packages/nodes/textNode": {
       "name": "@toonflow/node-text",
       "version": "2.0.0",
@@ -1429,8 +1410,6 @@
     "@toonflow/node-image": ["@toonflow/node-image@workspace:packages/nodes/imageNode"],
 
     "@toonflow/node-image-generation": ["@toonflow/node-image-generation@workspace:packages/nodes/imageGenerationNode"],
-
-    "@toonflow/node-minimax-h3-prompt": ["@toonflow/node-minimax-h3-prompt@workspace:packages/nodes/minimaxH3Prompt"],
 
     "@toonflow/node-shared": ["@toonflow/node-shared@workspace:packages/nodeShared"],
 
