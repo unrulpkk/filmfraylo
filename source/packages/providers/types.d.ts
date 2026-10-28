@@ -206,9 +206,9 @@ interface ProviderDefinition<TRules extends readonly ProviderFormRule[] = readon
   apiUrl?: string;
   /**
    * 媒体模型列表 GET 地址，使用配置的 apiKey 作为 Bearer 凭据，返回 { data: 模型数组 }。
-   * 模型须含 id，type 可由 URL 的 type 参数或同名已有模型补全。
+   * 模型须含 id，type 可由 modelInfo.type、URL 的 type 参数或同名已有模型补全。
    * 可选 modelInfo 对象提供模型能力（如 mode、audio、durationResolutionMap、imageSizes、imageRatios），获取时合并至模型顶层。
-   * 提供此字段后可手动获取；safillu 和 TF-Router 在有 key 的程序启动时自动同步。safillu 只接受已接入协议的模型 ID，同步线上名称与 modelInfo 能力。
+   * 提供此字段后可手动获取；safillu 和 TF-Router 在有 key 的程序启动时自动同步。媒体节点按 type 展示模型，不以调用适配器的模型名单过滤；实际生成由适配器校验调用协议。
    */
   modelsUrl?: string;
   protocol?: "openai-completions" | "openai-responses" | "anthropic-messages";

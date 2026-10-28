@@ -62,7 +62,7 @@ async function generate(
   const signal = AbortSignal.any([AbortSignal.timeout(30 * 60_000), ...(context.signal ? [context.signal] : [])]);
   const root =
     kind === "video"
-      ? "/tfrouter-frames/v1/video"
+      ? body.model === "MiniMax-H3-SelfLift" ? "/h3-selflift/v1/video" : "/tfrouter-frames/v1/video"
       : kind === "image"
       ? "/image/v1"
       : kind === "qwenImage"
@@ -196,7 +196,7 @@ export default {
   id: "safillu",
   label: "Safillu AI",
   icon: "",
-  version: "1.3.0",
+  version: "1.4.0",
   modelsUrl: "https://api.safillu.com/v1/models",
   readme:
     "支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
@@ -229,6 +229,14 @@ export default {
     {
       id: "MiniMax-H3",
       label: "MiniMax H3",
+      type: "video",
+      mode: ["text", "singleImage", "startEndRequired", ["imageReference:9", "audioReference:3", "videoReference:1"]],
+      audio: true,
+      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["768P", "1080P", "2K"] }],
+    },
+    {
+      id: "MiniMax-H3-SelfLift",
+      label: "MiniMax H3 · SelfLift",
       type: "video",
       mode: ["text", "singleImage", "startEndRequired", ["imageReference:9", "audioReference:3", "videoReference:1"]],
       audio: true,
@@ -294,7 +302,7 @@ export default {
     return [await asset(this, result.audio_url, "audio", result.task_id, result.format)];
   },
   async generateVideo(request: VideoRequest): Promise<MediaAsset[]> {
-    if (request.model !== "MiniMax-H3") throw new Error("请选择 MiniMax-H3 模型");
+    if (request.model !== "MiniMax-H3" && request.model !== "MiniMax-H3-SelfLift") throw new Error("当前视频模型尚未接入调用协议，请更新 safillu 适配器");
     const images = request.images ?? [],
       audios = request.audios ?? [],
       videos = request.videos ?? [];

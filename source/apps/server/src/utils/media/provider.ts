@@ -344,7 +344,7 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
   const apiKey = getMediaProviderApiKey(provider.id);
   if (expectedApiKey !== undefined && apiKey !== expectedApiKey) invalid("供应商配置已变更，请重试", 409);
   const modelTypes = provider.id === tfRouter.id && !modelType ? ["video", "image", "audio"] : [modelType];
-  const unsupportedModels: string[] = [];
+  const unclassifiedModels: string[] = [];
   // ACT: 各类型只并行获取，汇总后保存一次，避免同一供应商文件发生版本冲突。
   const models = (await Promise.all(modelTypes.map(async requestedModelType => {
     const modelsUrl = new URL(provider.modelsUrl!);
@@ -356,6 +356,7 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
     if (!response.ok) throw new Error(t`获取媒体模型列表失败（HTTP ${response.status}）`);
     const result = z.object({ data: z.array(mediaModelsSchema.element.partial({ label: true, type: true }).extend({
       modelInfo: z.object({
+        type: z.enum(["text", "image", "video", "audio"]).optional(),
         mode: z.array(z.union([z.string().min(1), z.array(z.string().min(1))])).optional(),
         audio: z.union([z.literal("optional"), z.boolean()]).optional(),
         durationResolutionMap: z.array(z.object({ duration: z.array(z.number().positive()), resolution: z.array(z.string().min(1)) })).optional(),
@@ -367,21 +368,14 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
     const requestedType = z.enum(["text", "image", "video", "audio"]).safeParse(modelsUrl.searchParams.get("type"));
     return result.data.flatMap(({ modelInfo, ...model }) => {
       const id = model.id.trim();
-      let previous = provider.models.find(item => item.id === id)
+      const previous = provider.models.find(item => item.id === id)
         ?? (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === id)
         ?? (provider.id === tfRouter.id ? tfRouter.models.find(item => item.id === id) : undefined);
-      let type = model.type ?? (requestedType.success ? requestedType.data : previous?.type);
-      if (provider.id === safillu.id) {
-        // ACT: 线上列表不能证明调用协议兼容；仅同步当前适配器支持的模型，新增协议须更新适配器。
-        const supported = safillu.models.find(item => item.id === id);
-        if (!supported) {
-          if (safilluLanguage.models.some(item => item.id === id)) return [];
-          unsupportedModels.push(id);
-          return [];
-        }
-        if (model.type !== undefined && model.type !== supported.type) invalid(t`模型 ${id} 的 type 与已接入协议不一致`);
-        previous ??= supported;
-        type = supported.type;
+      const type = model.type ?? modelInfo?.type ?? (requestedType.success ? requestedType.data : previous?.type);
+      if (!type && provider.id === safillu.id) {
+        // ACT: 有类型即展示，不按已接入模型 ID 过滤；缺少类型时不能凭名称猜测媒体类别。
+        if (!safilluLanguage.models.some(item => item.id === id)) unclassifiedModels.push(id);
+        return [];
       }
       if (!type) invalid(t`模型 ${id} 缺少 type，请在返回数据或 modelsUrl 的 type 参数中指定`);
       if (requestedType.success && type !== requestedType.data) invalid(t`模型 ${id} 的 type 与请求类型不一致`);
@@ -392,7 +386,7 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
       return [merged];
     });
   }))).flat();
-  if (!models.length) throw new Error("未获取到已接入的媒体模型，保留原有列表");
+  if (!models.length) throw new Error("未获取到可分类的媒体模型，保留原有列表");
   if (provider.id === safillu.id) {
     // 保留已有选择顺序，避免线上排序将需要参考图的模型变成空节点的默认模型。
     const order = new Map(provider.models.map((model, index) => [model.id, index]));
@@ -400,8 +394,8 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
   }
   const types = new Set(models.map(model => model.type));
   const saved = await saveMediaProvider(fileName, provider.id === safillu.id ? models : [...provider.models.filter(model => !types.has(model.type)), ...models], provider.revision, apiKey, provider.modelsUrl);
-  const modelSyncWarnings = unsupportedModels.length
-    ? [`线上另有 ${unsupportedModels.length} 个模型暂不支持或无法确认类别，未加入媒体下拉框：${unsupportedModels.slice(0, 8).join("、")}${unsupportedModels.length > 8 ? "等" : ""}。请使用当前已支持的模型。`]
+  const modelSyncWarnings = unclassifiedModels.length
+    ? [`线上另有 ${unclassifiedModels.length} 个模型未声明 type，且没有已有类别配置：${unclassifiedModels.slice(0, 8).join("、")}${unclassifiedModels.length > 8 ? "等" : ""}。请在模型接口返回 type 或 modelInfo.type。`]
     : [];
   return { ...saved, modelSyncWarnings };
 }
