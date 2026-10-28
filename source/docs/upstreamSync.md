@@ -59,7 +59,7 @@ git merge --ff-only update/toonflow-<SHA前12位>
 | 定制 | 主要位置 | 复核内容 |
 | --- | --- | --- |
 | 名称与图形 | `source/packages/assets/`、`packages/startup/`、`packages/i18n/src/locales/`、`apps/web/src/pages/home/`、`apps/web/src/components/settings/panels/about.vue` | 新页面、新文案和新图标也使用 FilmFraylo；保留 MIT 归属。内部 `@toonflow/*`、画布字段和 MCP 契约保留兼容名称。 |
-| safillu 网关 | `source/packages/providers/src/language/safillu.ts`、`media/safillu.ts`、`source/apps/server/src/utils/conf/index.ts`、`utils/media/` | 默认提供方、域名、Key 配置、模型同步、请求参数、轮询及媒体结果处理。上游新增模型能力须适配后才向用户开放。 |
+| safillu 网关 | `source/packages/providers/src/language/safillu.ts`、`media/safillu.ts`、`source/apps/server/src/utils/conf/index.ts`、`utils/media/` | 默认提供方、域名、Key 配置、模型同步、请求参数、轮询及媒体结果处理。模型按线上 type 展示，不恢复模型 ID 名单过滤；新增调用协议集中在供应商适配器接入，保持上游节点和 MCP 契约兼容。 |
 | 引导和渠道 | `source/apps/web/src/stores/settings.ts`、`components/settings/`、`pages/home/` | 保留首次 Key 配置要求、隐藏渠道及开发者入口的既有行为。 |
 | 媒体节点与预置内容 | `source/packages/nodes/`、`source/packages/nodeShared/`、`source/packages/teams/`、`source/packages/skills/` | 保留预置节点和 safillu 模型参数、参考素材、结果输出与画布兼容性，同时接入需要的上游新能力。 |
 | 构建、更新与数据 | 根目录 `.github/workflows/`、`scripts/`、`references/`、`source/electrobun.config.ts`、`apps/desktop/`、`apps/server/scripts/` | 安装包身份、下载源、更新源仍为 FilmFraylo，数据目录与旧配置兼容迁移有效。上游 `package.json`、Bun 与原生依赖变化还须同步审阅 FilmFraylo CI。 |
