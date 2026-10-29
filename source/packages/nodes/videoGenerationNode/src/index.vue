@@ -184,13 +184,13 @@ function getDurations(choice: NodeMediaModel) {
 
 function getResolutions(choice: NodeMediaModel, duration?: number) {
   return [...new Set((choice.durationResolutionMap ?? []).filter((item) => item.duration.includes(duration!)).flatMap((item) => item.resolution))]
-    .filter(resolution => !(choice.providerId === "safillu" && frameMode.value && resolution === "1080P"))
+    .filter(resolution => !(choice.providerId === "safillu" && frameMode.value && ["480P", "1080P"].includes(resolution.toUpperCase())))
     .sort((left, right) => (Number.parseFloat(left) * (/k$/i.test(left) ? 1000 : 1) || Infinity) - (Number.parseFloat(right) * (/k$/i.test(right) ? 1000 : 1) || Infinity));
 }
 const settingsModel = computed(() => {
   const choice = selectedModel.value;
   return choice?.providerId === "safillu" && frameMode.value ? {
-    ...choice, durationResolutionMap: choice.durationResolutionMap?.map(item => ({ ...item, resolution: item.resolution.filter(value => value !== "1080P") })),
+    ...choice, durationResolutionMap: choice.durationResolutionMap?.map(item => ({ ...item, resolution: item.resolution.filter(value => !["480P", "1080P"].includes(value.toUpperCase())) })),
   } : choice;
 });
 // ACT: 引用改变时只替换不适用的模式；普通媒体优先作为参考，避免自动变成首尾帧。

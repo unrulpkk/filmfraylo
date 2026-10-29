@@ -196,7 +196,7 @@ export default {
   id: "safillu",
   label: "Safillu AI",
   icon: "",
-  version: "1.4.0",
+  version: "1.4.1",
   modelsUrl: "https://api.safillu.com/v1/models",
   readme:
     "支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
@@ -232,7 +232,7 @@ export default {
       type: "video",
       mode: ["text", "singleImage", "startEndRequired", ["imageReference:9", "audioReference:3", "videoReference:1"]],
       audio: true,
-      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["768P", "1080P", "2K"] }],
+      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480P", "768P", "1080P", "2K"] }],
     },
     {
       id: "MiniMax-H3-SelfLift",
@@ -240,7 +240,7 @@ export default {
       type: "video",
       mode: ["text", "singleImage", "startEndRequired", ["imageReference:9", "audioReference:3", "videoReference:1"]],
       audio: true,
-      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["768P", "1080P", "2K"] }],
+      durationResolutionMap: [{ duration: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], resolution: ["480P", "768P", "1080P", "2K"] }],
     },
     { id: "Qwen3-TTS-VoiceDesign", label: "Qwen3 · 音色设计", type: "audio" },
     { id: "YuE2-BGM", label: "YuE2 · BGM 背景音乐", type: "audio" },
@@ -313,7 +313,9 @@ export default {
     const duration = request.duration ?? 5,
       resolution = (request.resolution ?? "768P").toLowerCase();
     if (!Number.isInteger(duration) || duration < 4 || duration > 15) throw new Error("H3 时长须为 4–15 秒整数");
-    if (!(frames ? ["768p", "2k"] : ["768p", "1080p", "2k"]).includes(resolution)) throw new Error("H3 分辨率无效；首尾帧仅支持 768P 和 2K");
+    // 参考模式的可选档位来自线上模型能力；这里只校验协议格式，避免新档位被旧名单拦截。
+    if (!/^(?:[1-9]\d{2,4}p|[1-9]\d?k)$/.test(resolution)) throw new Error("H3 分辨率格式无效");
+    if (frames && !["768p", "2k"].includes(resolution)) throw new Error("H3 首尾帧仅支持 768P 和 2K");
     if (request.generateAudio === false) throw new Error("H3 不支持关闭音频");
     let total = 0;
     const reference = (input: MediaInput, type: "image" | "audio" | "video", role: string) => {
