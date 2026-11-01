@@ -491,6 +491,46 @@
         "vue": "^3.5.42",
       },
     },
+    "packages/nodes/h3PromptBuilderNode": {
+      "name": "@toonflow/node-h3-prompt-builder",
+      "version": "1.0.0",
+      "dependencies": {
+        "@tabler/icons-vue": "^3.46.0",
+      },
+      "devDependencies": {
+        "@toonflow/node-shared": "workspace:*",
+        "@toonflow/nodes-scaffold": "workspace:*",
+        "sass": "1.104.0",
+        "typescript": "~6.0.3",
+        "vite": "^8.2.2",
+        "vue-tsc": "^3.3.11",
+      },
+      "peerDependencies": {
+        "@vue-flow/core": "^1.48.2",
+        "element-plus": "^2.14.5",
+        "vue": "^3.5.42",
+      },
+    },
+    "packages/nodes/h3PromptNode": {
+      "name": "@toonflow/node-h3-prompt",
+      "version": "1.0.0",
+      "dependencies": {
+        "@tabler/icons-vue": "^3.46.0",
+      },
+      "devDependencies": {
+        "@toonflow/node-shared": "workspace:*",
+        "@toonflow/nodes-scaffold": "workspace:*",
+        "sass": "1.104.0",
+        "typescript": "~6.0.3",
+        "vite": "^8.2.2",
+        "vue-tsc": "^3.3.11",
+      },
+      "peerDependencies": {
+        "@vue-flow/core": "^1.48.2",
+        "element-plus": "^2.14.5",
+        "vue": "^3.5.42",
+      },
+    },
     "packages/nodes/imageGenerationNode": {
       "name": "@toonflow/node-image-generation",
       "version": "2.0.1",
@@ -1406,6 +1446,10 @@
     "@toonflow/node-director3d": ["@toonflow/node-director3d@workspace:packages/nodes/director3dNode"],
 
     "@toonflow/node-frame-analysis": ["@toonflow/node-frame-analysis@workspace:packages/nodes/frameAnalysisNode"],
+
+    "@toonflow/node-h3-prompt": ["@toonflow/node-h3-prompt@workspace:packages/nodes/h3PromptNode"],
+
+    "@toonflow/node-h3-prompt-builder": ["@toonflow/node-h3-prompt-builder@workspace:packages/nodes/h3PromptBuilderNode"],
 
     "@toonflow/node-image": ["@toonflow/node-image@workspace:packages/nodes/imageNode"],
 

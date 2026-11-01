@@ -1,0 +1,45 @@
+
+subject_definitions:
+
+<Subject 1> (S1) is Zhu Youjian, Prince Xin. <Picture 1> defines his exact face, gold hair ornament, long black hair, ivory-white embroidered robe, jade-green garments, and opening courtyard composition.
+
+<Subject 2> (S2) is Wang Cheng'en. <Picture 2> defines his exact face, black eunuch hat, dark navy robe, and reverse-angle courtyard composition.
+
+Both pictures depict the same courtyard, with consistent architecture, stone furniture, flowering plants, and morning lighting.
+
+<Audio 1> is S1 Zhu Youjian's Mandarin voice reference.
+<Audio 2> is S2 Wang Cheng'en's Mandarin voice reference.
+
+
+detailed_description:
+
+14-second cinematic Ming Dynasty historical drama, 16:9, realistic style. Preserve character identities, costumes, courtyard environment, and natural lip synchronization.
+
+[Shot 1 | 0–8s]
+
+Begin with the exact composition of <Picture 1>.
+
+Zhu Youjian (S1) sits beside the stone table, looking slightly to one side with a worried expression.
+
+S1 speaks:
+<d>[Chinese] 听说皇兄近日身体欠安，我在想，要不要进宫探望一下？</d>
+
+Camera: Stable medium close-up.
+
+
+[Shot 2 | 8–14s]
+
+Cut to the reverse-angle composition of <Picture 2>.
+
+Wang Cheng'en (S2) stands respectfully, leaning forward slightly with his hands folded inside his sleeves. Zhu Youjian remains visible in the right foreground.
+
+S2 speaks:
+<d>[Chinese] 王爷不用担心，皇上他……</d>
+
+Suddenly, several urgent wooden knocks are heard off-screen, interrupting his unfinished sentence.
+
+Wang Cheng'en stops speaking and turns slightly in reaction. Zhu Youjian also turns slightly.
+
+The camera remains focused on the two characters. The courtyard stays still, and the wooden gate remains closed.
+
+Camera: Stable eye-level medium shot. End with both characters briefly pausing after turning.

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./h3Prompt": "./src/h3Prompt.ts",
+    "./h3PromptEditor": "./src/components/h3PromptEditor.vue",
     "./promptInput": "./src/components/promptInput.vue",
     "./referenceItem": "./src/components/referenceItem.vue",
     "./mediaHistory": "./src/components/mediaHistory.vue",
