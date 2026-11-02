@@ -2,8 +2,14 @@ import { z, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
 import example from "./h3PromptExample.txt?raw";
 
 export const h3Handles = [
-  { id: "in", type: "target", dataType: "STRING", label: "文本输入" },
+  { id: "in", type: "target", dataType: "STRING", label: "中文提示词输入（第一个标签）" },
   { id: "text", type: "source", dataType: "STRING", label: "英文提示词输出" },
+] satisfies NodeHandle[];
+
+export const h3BuilderHandles = [
+  { id: "in", type: "target", dataType: "STRING", label: "自然语言输入" },
+  { id: "text", type: "source", dataType: "STRING", label: "英文提示词 → 普通文本节点" },
+  { id: "chinese", type: "source", dataType: "STRING", label: "中文提示词 → H3 第一个标签" },
 ] satisfies NodeHandle[];
 
 export const h3PairSchema = z.strictObject({ chinese: z.string().trim().min(1).max(24000), english: z.string().trim().min(1).max(24000) });

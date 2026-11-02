@@ -1,6 +1,6 @@
 {
   "name": "@toonflow/node-h3-prompt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": { "build": "vite build", "dev": "vite build --watch", "typecheck": "vue-tsc --noEmit" },

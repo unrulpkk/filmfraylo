@@ -493,7 +493,7 @@
     },
     "packages/nodes/h3PromptBuilderNode": {
       "name": "@toonflow/node-h3-prompt-builder",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@tabler/icons-vue": "^3.46.0",
       },
@@ -513,7 +513,7 @@
     },
     "packages/nodes/h3PromptNode": {
       "name": "@toonflow/node-h3-prompt",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@tabler/icons-vue": "^3.46.0",
       },

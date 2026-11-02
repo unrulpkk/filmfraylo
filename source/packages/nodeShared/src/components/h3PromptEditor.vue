@@ -21,7 +21,7 @@
         <el-button :disabled="!currentPair || busy" @click="copyText">复制{{ !planner && tab === 'chinese' ? '中文' : !planner && tab === 'native' ? '原生英文' : '英文' }}</el-button>
       </div>
       <div class="outputState" aria-live="polite">{{ busy ? 'DeepSeek 正在整理并翻译…' : currentPair ? '已就绪 · 下游接收英文（参考图1 格式）' : '等待转换 · 下游暂不输出' }}</div>
-      <div v-if="planner" class="outputState">仅连接文本节点；连接 H3 中英提示词节点可显示三个版本。</div>
+      <div v-if="planner" class="outputState">中文出口接 H3 中英提示词的第一个标签；英文出口接普通文本节点。</div>
     </div>
   </nodeSkeleton>
 </template>
@@ -32,14 +32,14 @@ import { useVueFlow } from "@vue-flow/core";
 import { ElAlert, ElButton, ElInput, ElMessage, ElOption, ElSelect, ElTabPane, ElTabs } from "element-plus";
 import { IconLanguage, IconWand } from "@tabler/icons-vue";
 import { nodeSkeleton, nodeTools, useNode, useNodeEvent, z, type NodeAiModel, type NodeInputValue, type NodeHandle } from "@toonflow/nodes-scaffold/runtime";
-import { h3Handles, h3PairSchema, h3References, h3SystemPrompt, readH3Pair, type H3Pair, type H3Result } from "../h3Prompt";
+import { h3BuilderHandles, h3Handles, h3PairSchema, h3References, h3SystemPrompt, readH3Pair, type H3Pair, type H3Result } from "../h3Prompt";
 
 const props = defineProps<{ planner?: boolean }>();
 const { node, nodeProps, outputs, ai, nodeEvent } = useNode({
   label: props.planner ? "H3 自然语言整理" : "H3 中英提示词",
   icon: props.planner ? IconWand : IconLanguage,
-  handles: structuredClone(h3Handles),
-  outputs: { text: { dataType: "STRING", value: "" } },
+  handles: structuredClone(props.planner ? h3BuilderHandles : h3Handles),
+  outputs: { text: { dataType: "STRING", value: "" }, ...(props.planner ? { chinese: { dataType: "STRING" as const, value: "" } } : {}) },
 });
 const flow = useVueFlow();
 const data = computed(() => node.data as typeof node.data & { h3Draft?: string; h3Model?: string; h3Result?: H3Result });
@@ -54,7 +54,8 @@ const sourcePair = computed(() => {
   const result = source.data.h3Result as H3Result | undefined;
   const parsed = h3PairSchema.safeParse(result && { chinese: result.chinese, english: result.english });
   const value = parsed.success ? parsed.data : undefined;
-  return value && h3References(value.english) === input.value ? value : undefined;
+  const expected = input.sourceHandle === "chinese" ? value?.chinese : value?.english;
+  return value && expected && h3References(expected) === input.value ? value : undefined;
 });
 const draft = computed({
   get: () => connected.value ? sourcePair.value?.chinese ?? (typeof inputValues.value[0]?.value === "string" ? inputValues.value[0].value : "") : data.value.h3Draft ?? "",
@@ -83,6 +84,9 @@ let disposed = false;
 let revision = 0;
 
 nodeEvent.on("input:in", values => { inputValues.value = values; });
+watch(() => inputValues.value.map(value => JSON.stringify([value.source, value.sourceHandle])).join("|"), () => {
+  if (!props.planner && connected.value) tab.value = "chinese";
+});
 nodeEvent.on("canConnect", (connection, context) => {
   if (context.edges.some(edge => edge.target === node.id && edge.targetHandle === "in" && (edge.source !== connection.source || edge.sourceHandle !== connection.sourceHandle))) return false;
   const visited = new Set<string>();
@@ -108,6 +112,7 @@ if (props.planner) {
       if (id === node.id || listeners.has(id)) continue;
       const off = connections.run(() => useNodeEvent(id, flow).on("canConnect", connection => {
         if (connection.source !== node.id) return true;
+        if (connection.sourceHandle === "chinese") return flow.findNode(id)?.type === "remote-h3PromptNode" && connection.targetHandle === "in";
         const sources = (flow.findNode(id)?.data.handles as NodeHandle[] | undefined)?.filter(handle => handle.type === "source") ?? [];
         return sources.length > 0 && sources.every(handle => handle.dataType === "STRING");
       }));
@@ -123,7 +128,10 @@ watch([draft, model, sourcePair, incomingError], () => {
   if (sourcePair.value) data.value.h3Result = { ...sourcePair.value, input: draft.value, model: model.value };
   if (draft.value.trim() && !currentPair.value && !incomingError.value && selectedModel.value) timer = setTimeout(() => { void convert(); }, 1200);
 }, { immediate: true });
-watch(currentPair, pair => { outputs.value.text.value = pair?.english ?? ""; }, { immediate: true, flush: "sync" });
+watch(currentPair, pair => {
+  outputs.value.text.value = pair?.english ?? "";
+  if (outputs.value.chinese) outputs.value.chinese.value = pair?.chinese ?? "";
+}, { immediate: true, flush: "sync" });
 
 function cancel() {
   revision++;
