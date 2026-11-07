@@ -14,7 +14,9 @@
       </div>
       <div v-else class="welcomeContent">
         <h1 id="welcomeTitle">快速开始</h1>
-        <p class="description">使用 Safillu AI聚合平台，快速、安全地调用主流 AI 模型。</p>
+        <p class="description">可直接进入工作区，由 Harness 操作画布、导入或使用自己生成的素材。调用 Safillu 模型时再配置 Key。</p>
+        <el-button class="loginButton" type="primary" :loading="saving" @click="completeSetup">直接进入工作区</el-button>
+        <p><a href="https://api.safillu.com/" target="_blank" rel="noopener noreferrer">需要调用 Safillu 模型？前往官网申请 Key</a></p>
         <el-input
           v-model="newApiKey"
           type="password"

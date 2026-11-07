@@ -177,7 +177,9 @@ export async function generateMedia(
   const generate = mediaType === "image" ? provider.generateImage : mediaType === "video" ? provider.generateVideo : provider.generateAudio;
   if (typeof generate !== "function") invalid(t`此供应商不支持${translateMessage({ image: "图片", video: "视频", audio: "音频" }[mediaType])}生成`);
   const rules = Array.isArray(provider.rules) ? provider.rules : [];
-  if (rules.some(rule => rule.field === "apiKey") && (typeof provider.config.apiKey !== "string" || !provider.config.apiKey.trim())) invalid("请先在媒体模型设置中配置供应商 API Key");
+  if (rules.some(rule => rule.field === "apiKey") && (typeof provider.config.apiKey !== "string" || !provider.config.apiKey.trim())) invalid(provider.id === "safillu"
+    ? "调用 Safillu 模型需要 API Key。请到 https://api.safillu.com/ 申请，然后在设置 → 媒体模型 → Safillu AI 中填写。Harness 操作画布和导入外部素材无需此 Key。"
+    : "请先在媒体模型设置中配置供应商 API Key");
   const prepared = await prepareRequest(directory, mediaType, request, readReference, signal);
   signal?.throwIfAborted();
   const finish = beginGeneration(provider);

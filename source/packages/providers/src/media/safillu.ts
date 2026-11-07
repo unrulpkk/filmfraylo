@@ -5,13 +5,17 @@ const rules = [
 type Context = ProviderContext<ProviderConfig<typeof rules>>;
 type Task = { task_id?: string; status?: string; data?: unknown; audio_url?: string; format?: string; error?: unknown };
 
-function connection(context: Context) {
-  const apiKey = context.config.apiKey.trim();
-  if (!apiKey) throw new Error("请填写 Safillu AI 的 API Key");
+function baseAddress(context: Context) {
   const baseUrl = (context.config.baseUrl?.trim() || "https://api.safillu.com").replace(/\/+$/, "").replace(/\/v1$/, "");
   const url = new URL(baseUrl);
   if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error("NewAPI 地址无效");
-  return { baseUrl, headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } };
+  return baseUrl;
+}
+
+function connection(context: Context) {
+  const apiKey = context.config.apiKey.trim();
+  if (!apiKey) throw new Error("调用 Safillu 模型需要 API Key，请到 https://api.safillu.com/ 申请，并在设置 → 媒体模型 → Safillu AI 中填写");
+  return { baseUrl: baseAddress(context), headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } };
 }
 
 async function api(context: Context, path: string, signal: AbortSignal, body?: unknown, query = false): Promise<Task> {
@@ -192,15 +196,118 @@ function base64(input: MediaInput, type: "image" | "video" | "audio") {
   return { url: `data:${input.mimeType};base64,${data}`, bytes };
 }
 
+type PriceModel = { model_name: string; billing_mode?: string; billing_expr?: string; quota_type?: number; model_price?: number;
+  billing_usage_schema?: Record<string, { enum?: string[] }>; billing_plugin_variants?: (PriceModel & { plugin_key: string })[] };
+const priceCatalogs = new Map<string, { expires: number; value: Promise<PriceModel[]> }>();
+
+async function priceCatalog(context: Context) {
+  const baseUrl = baseAddress(context);
+  const previous = priceCatalogs.get(baseUrl);
+  if (previous && previous.expires > Date.now()) return previous.value;
+  if (priceCatalogs.size >= 8) priceCatalogs.delete(priceCatalogs.keys().next().value!);
+  const value = (async () => {
+    const response = await context.tool.fetch(`${baseUrl}/api/pricing`, { headers: { Accept: "application/json" }, redirect: "error", signal: context.signal });
+    if (!response.ok) throw new Error(`Safillu 价格查询失败（HTTP ${response.status}）`);
+    const result = await response.json() as { success?: boolean; data?: PriceModel[] };
+    if (result.success !== true || !Array.isArray(result.data)) throw new Error("Safillu 价格数据格式无效");
+    return result.data;
+  })();
+  const entry = { expires: Date.now() + 30000, value };
+  priceCatalogs.set(baseUrl, entry);
+  try { return await value; }
+  catch (error) { if (priceCatalogs.get(baseUrl) === entry) priceCatalogs.delete(baseUrl); throw error; }
+}
+
+// ACT: 只解释媒体报价所需的数值、u、tier、四则运算和条件表达式，不执行线上脚本。
+// 遇到新的计费函数或未知用量字段返回“无法估价”，避免把不支持的规则算成零费用。
+function priceExpression(expression: string, usage: Record<string, string | number>): number {
+  if (expression.length > 4000) throw new Error("计费表达式过长");
+  const tokens = expression.match(/"(?:[^"\\]|\\.)*"|\d+(?:\.\d+)?(?:e[+-]?\d+)?|[a-zA-Z_][a-zA-Z_0-9]*|==|!=|[()+*/?:,\-]/g) ?? [];
+  if (tokens.length > 512 || tokens.join("") !== expression.replace(/\s+(?=(?:[^"]*"[^"]*")*[^"]*$)/g, "")) throw new Error("不支持的计费语法");
+  let position = 0, depth = 0;
+  type Value = number | string | boolean;
+  const number = (value: Value) => { if (typeof value !== "number" || !Number.isFinite(value)) throw new Error("计费用量无效"); return value; };
+  const expect = (token: string) => { if (tokens[position++] !== token) throw new Error("计费表达式无效"); };
+  function atom(): Value {
+    if (++depth > 24) throw new Error("计费表达式嵌套过深");
+    try {
+      const token = tokens[position++];
+      if (!token) throw new Error("计费表达式不完整");
+      if (token === "(") { const value = conditional(); expect(")"); return value; }
+      if (token === "-") return -number(atom());
+      if (token.startsWith('"')) return JSON.parse(token);
+      if (/^\d/.test(token)) return number(Number(token));
+      if (token !== "u" && token !== "tier") throw new Error("不支持的计费函数");
+      expect("(");
+      const key = conditional();
+      if (typeof key !== "string") throw new Error("计费字段无效");
+      if (token === "tier") { expect(","); const value = number(conditional()); expect(")"); return value; }
+      expect(")");
+      if (!Object.hasOwn(usage, key)) throw new Error("未知计费用量");
+      return usage[key];
+    } finally { depth--; }
+  }
+  function product(): Value {
+    let left = atom();
+    while (tokens[position] === "*" || tokens[position] === "/") {
+      const op = tokens[position++], right = number(atom());
+      left = op === "*" ? number(left) * right : number(left) / right;
+    }
+    return left;
+  }
+  function sum(): Value {
+    let left = product();
+    while (tokens[position] === "+" || tokens[position] === "-") {
+      const op = tokens[position++], right = number(product());
+      left = op === "+" ? number(left) + right : number(left) - right;
+    }
+    return left;
+  }
+  function conditional(): Value {
+    if (++depth > 24) throw new Error("计费表达式嵌套过深");
+    try {
+      let value = sum();
+      if (tokens[position] === "==" || tokens[position] === "!=") {
+        const op = tokens[position++], right = sum(); value = op === "==" ? value === right : value !== right;
+      }
+      if (tokens[position] !== "?") return value;
+      if (typeof value !== "boolean") throw new Error("计费条件无效");
+      position++; const yes = conditional(); expect(":"); const no = conditional(); return value ? yes : no;
+    } finally { depth--; }
+  }
+  const amount = number(conditional());
+  if (position !== tokens.length || amount < 0) throw new Error("计费结果无效");
+  return amount;
+}
+
 export default {
   id: "safillu",
   label: "Safillu AI",
   icon: "",
-  version: "1.4.1",
+  version: "1.5.0",
   modelsUrl: "https://api.safillu.com/v1/models",
   readme:
     "支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
   rules,
+  async getPrice(request: ProviderPriceRequest): Promise<ProviderPrice | null> {
+    const model = (await priceCatalog(this)).find(item => item.model_name === request.model);
+    if (!model) return null;
+    // 此适配器的 H3 提交走 tfrouter-frames，使用线上同一通道的报价，不能取其它 H3 通道的默认价。
+    const pricing = request.model === "MiniMax-H3"
+      ? model.billing_plugin_variants?.find(item => item.plugin_key === "tfrouter-h3-frames") ?? model : model;
+    const resolution = request.type === "video" ? (request.resolution ?? "768P").toUpperCase() : "";
+    const resolutions = pricing.billing_usage_schema?.resolution?.enum;
+    if (resolutions && !resolutions.includes(resolution)) return null;
+    if (request.type === "image" && (!Number.isInteger(request.n ?? 1) || (request.n ?? 1) < 1 || (request.n ?? 1) > 4)) return null;
+    if (request.type === "video" && (!Number.isFinite(request.duration ?? 5) || (request.duration ?? 5) <= 0)) return null;
+    try {
+      const amount = pricing.billing_mode === "tiered_expr" && typeof pricing.billing_expr === "string"
+        ? priceExpression(pricing.billing_expr, { calls: 1, ...(request.type === "video" ? { resolution, seconds: request.duration ?? 5 } : {}), ...(request.type === "image" ? { image_count: request.n ?? 1 } : {}) })
+        : pricing.quota_type === 1 && typeof pricing.model_price === "number" ? pricing.model_price : undefined;
+      if (amount === undefined || !Number.isFinite(amount) || amount < 0) return null;
+      return { price: `$${Number(amount.toFixed(6))} USD`, tips: "线上基础预估价（单次调用）；账号分组倍率另计，以平台实际扣费为准。" };
+    } catch { return null; }
+  },
   models: [
     {
       id: "Z-Image-Base",
