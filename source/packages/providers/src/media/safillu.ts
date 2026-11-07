@@ -284,7 +284,7 @@ export default {
   id: "safillu",
   label: "Safillu AI",
   icon: "",
-  version: "1.5.0",
+  version: "1.5.1",
   modelsUrl: "https://api.safillu.com/v1/models",
   readme:
     "支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
@@ -314,7 +314,7 @@ export default {
       label: "Z-Image Base",
       type: "image",
       mode: ["text"],
-      imageSizes: ["1K", "2K"],
+      imageSizes: ["480P", "720P", "1K", "1080P", "2K"],
       imageRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"],
     },
     {
@@ -322,7 +322,7 @@ export default {
       label: "Qwen Image 2.1",
       type: "image",
       mode: ["text"],
-      imageSizes: ["1K", "2K"],
+      imageSizes: ["480P", "720P", "1K", "1080P", "2K"],
       imageRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"],
     },
     {
@@ -330,7 +330,7 @@ export default {
       label: "Qwen Image 2.1 · 图片编辑",
       type: "image",
       mode: ["singleImage", "multiReference"],
-      imageSizes: ["1K", "2K"],
+      imageSizes: ["480P", "720P", "1K", "1080P", "2K"],
       imageRatios: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"],
     },
     {
@@ -358,9 +358,11 @@ export default {
       model: request.model,
       prompt: text(request.prompt, "图片提示词", 12000),
       ratio: text(request.ratio ?? "1:1", "图片比例", 64),
-      resolution: text(request.size ?? "1K", "图片分辨率", 64),
+      resolution: text(request.size ?? "1K", "图片分辨率", 64).toUpperCase(),
       seed: seed(request),
     };
+    // 档位由模型能力决定；只校验协议格式，避免新增线上档位被旧客户端名单拦截。
+    if (!/^(?:[1-9]\d{2,4}P|[1-9]\d?K)$/.test(body.resolution)) throw new Error("图片分辨率格式无效");
     const negativePrompt = request.other?.negativePrompt;
     if (negativePrompt !== undefined && (typeof negativePrompt !== "string" || negativePrompt.length > 12000))
       throw new Error("负向提示词须为不超过 12000 字符的字符串");
@@ -373,9 +375,8 @@ export default {
       // ACT: 同一编辑协议的业务参数由线上接口校验，客户端不固定参考图数量或输出规格。
       result = await generate(this, "edit", { ...body, images: images.map((image) => image.url), n: request.n, negative_prompt: negativePrompt });
     } else if (request.model === "Z-Image-Base" || request.model === "Qwen-Image-2.1") {
-      body.resolution = body.resolution.toUpperCase();
-      if (!["1K", "2K"].includes(body.resolution) || !["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"].includes(body.ratio))
-        throw new Error("图片分辨率或比例无效");
+      if (!["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3", "21:9"].includes(body.ratio))
+        throw new Error("图片比例无效");
       if (request.images?.length) throw new Error("该模型仅支持文生图，请移除参考图片");
       const n = request.n ?? 1;
       result = await generate(this, request.model === "Z-Image-Base" ? "image" : "qwenImage", { ...body, n, negative_prompt: negativePrompt });
