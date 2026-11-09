@@ -372,6 +372,7 @@ export async function refreshMediaProviderModels(fileName: string, revision?: st
         ?? (mediaProviders as readonly Provider[]).find(item => item.id === provider.id)?.models.find(item => item.id === id)
         ?? (provider.id === tfRouter.id ? tfRouter.models.find(item => item.id === id) : undefined);
       const type = model.type ?? modelInfo?.type ?? (requestedType.success ? requestedType.data : previous?.type);
+      if (provider.id === safillu.id && type === "text") return [];
       if (!type && provider.id === safillu.id) {
         // ACT: 有类型即展示，不按已接入模型 ID 过滤；缺少类型时不能凭名称猜测媒体类别。
         if (!safilluLanguage.models.some(item => item.id === id)) unclassifiedModels.push(id);
