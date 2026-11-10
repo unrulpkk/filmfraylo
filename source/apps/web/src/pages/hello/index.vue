@@ -16,14 +16,14 @@
         <h1 id="welcomeTitle">快速开始</h1>
         <p class="description">可直接进入工作区，由 Harness 操作画布、导入或使用自己生成的素材。调用 Safillu 模型时再配置 Key。</p>
         <el-button class="loginButton" type="primary" :loading="saving" @click="completeSetup">直接进入工作区</el-button>
-        <p><a href="https://api.safillu.com/" target="_blank" rel="noopener noreferrer">需要调用 Safillu 模型？前往官网申请 Key</a></p>
+        <p><a href="https://api.safillu.com/" target="_blank" rel="noopener noreferrer">需要调用 Safillu 模型？前往官网注册账号并申请 API Key</a>，然后在下方填写。已有账号可直接登录申请。</p>
         <el-input
           v-model="newApiKey"
           type="password"
           showPassword
           autocomplete="off"
-          placeholder="输入 Safillu 渠道 Key"
-          aria-label="Safillu 渠道 Key"
+          placeholder="输入在 Safillu 官网申请的 API Key"
+          aria-label="Safillu API Key"
           :disabled="saving"
           class="keyInput" />
         <el-button class="loginButton" type="primary" :loading="saving" :disabled="!newApiKey.trim()" @click="configureNewApi">

@@ -12,6 +12,7 @@
     @closed="resetForm">
     <el-scrollbar maxHeight="65vh">
       <el-form ref="providerForm" :model="form" :rules="rules" labelPosition="top" :disabled="saving" class="customProviderForm">
+        <messageMarkdown v-if="providerReadme" :content="providerReadme" />
         <div class="formGrid">
           <el-form-item label="Provider ID" prop="id"><el-input v-model="form.id" placeholder="例如 myProvider" /></el-form-item>
           <el-form-item label="显示名称" prop="label"><el-input v-model="form.label" placeholder="供应商的显示名称" /></el-form-item>
@@ -157,6 +158,7 @@ import {
 } from "@tabler/icons-vue";
 import { saveSettings, type CustomProvider, type CustomProviderModel } from "@/stores/settings";
 import { languageProviders } from "@toonflow/providers";
+import messageMarkdown from "@/components/messageMarkdown.vue";
 import { isTfRouterProvider } from "@/lib/tf";
 import { thinkingLevels, type ThinkingLevel, type ReasoningEfforts } from "@toonflow/server/modelReasoning";
 
@@ -164,6 +166,7 @@ const props = defineProps<{ provider?: CustomProvider }>();
 const visible = defineModel<boolean>({ default: false });
 const providerForm = ref<FormInstance>();
 const form = reactive({ id: "", label: "", apiUrl: "", protocol: "openai-completions", apiKey: "" });
+const providerReadme = computed(() => languageProviders.find(provider => provider.id === form.id)?.readme ?? "");
 const models = ref<(CustomProviderModel & { key: string })[]>([]);
 const expandedModels = ref(new Set<string>());
 const fetchedModels = shallowRef<CustomProviderModel[]>([]);

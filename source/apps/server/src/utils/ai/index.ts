@@ -95,7 +95,7 @@ export function getConfiguredModel(providerId: string, modelId: string) {
   const parsed = providerSchema.safeParse(Array.isArray(providers) ? providers.find(item => item?.id === providerId) : undefined);
   if (!parsed.success) throw Object.assign(new Error("请先在设置中配置模型供应商"), { status: 400 });
   const provider = parsed.data;
-  if (providerId === "safillu" && !provider.apiKey.trim()) throw Object.assign(new Error("调用 Safillu 模型需要 API Key。请到 https://api.safillu.com/ 申请，然后在设置 → 语言模型 → Safillu AI 中填写。Harness 操作画布和导入外部素材无需此 Key。"), { status: 400 });
+  if (providerId === "safillu" && !provider.apiKey.trim()) throw Object.assign(new Error("调用 Safillu 模型需要 API Key。请前往 https://api.safillu.com/ 注册账号并申请 API Key，再回到 FilmFraylo「设置 → 语言模型 → Safillu AI → 编辑」填写并保存。已有账号可直接登录申请；Key 只需在本地设置中填写，无需发送到聊天中。Harness 操作画布和导入外部素材无需此 Key。"), { status: 400 });
   const model = provider.models.find(item => item.id === modelId);
   if (!model) throw Object.assign(new Error("所选模型不存在，请重新选择"), { status: 400 });
   const baseUrl = new URL(provider.apiUrl);

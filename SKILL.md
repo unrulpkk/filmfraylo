@@ -35,17 +35,17 @@ WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，�
 
 ## API Key 与充值引导
 
-官网及充值入口统一使用 https://api.safillu.com。需要获取 Key 或充值时提供可点击链接；未核实具体页面路径时只使用该首页，不猜测登录、令牌或支付页面地址。
+官网及充值入口统一使用 https://api.safillu.com/。需要 Key 时，明确引导「打开官网 → 注册账号（已有账号直接登录）→ 申请 API Key → 回到 FilmFraylo 对应模型设置填写并保存」，并提供可点击链接；不只提示“缺少 Key”。未核实具体页面路径时只使用该首页，不猜测登录、令牌或支付页面地址。
 
-- 首次启动直接进入项目首页，不因未配置 Key 阻塞工作区或 MCP。当前 Harness 可操作画布、使用本地素材，或通过自身图片生成能力生成后导入 FilmFraylo；这些操作无需 Safillu Key。只有实际选择并调用 Safillu 模型时，引导用户前往 https://api.safillu.com/ 申请 Key，再在对应语言模型或媒体模型设置中填写。不得代填虚构 Key。
-- 准备调用 Safillu 图片、视频或配音模型时，若未配置 Key，引导用户在官网获取 API Key，再到本地 FilmFraylo「设置 → 媒体模型 → safillu → 编辑模型」填写 API Key 并保存。默认服务地址为 `https://api.safillu.com`。未配置时保留已有文件和画布，继续可独立完成的文字工作，不阻塞整个创作流程。
+- 首次启动直接进入项目首页，不因未配置 Key 阻塞工作区或 MCP。当前 Harness 可操作画布、使用本地素材，或通过自身图片生成能力生成后导入 FilmFraylo；这些操作无需 Safillu Key。只有实际选择并调用 Safillu 模型时，引导用户前往 [Safillu 官网](https://api.safillu.com/) 注册账号并申请 API Key；已有账号直接登录申请。调用文本模型时在「设置 → 语言模型 → Safillu AI → 编辑」填写并保存，调用媒体模型时使用下述媒体模型设置。不得代填虚构 Key。
+- 准备调用 Safillu 图片、视频或配音模型时，若未配置 Key，引导用户在官网注册账号并申请 API Key，再到本地 FilmFraylo「设置 → 媒体模型 → Safillu AI → 编辑模型」填写 API Key 并保存。默认服务地址为 `https://api.safillu.com`。未配置时保留已有文件和画布，继续可独立完成的文字工作，不阻塞整个创作流程。
 - Key 由用户直接填入本地网页，不要求粘贴到聊天里，不回显 Key，也不把它写入剧本、画布文本、日志或 productionState.md。检查状态时优先使用不返回密钥的模型或配置状态接口。
 - 只有供应商明确返回余额或额度不足时才引导到官网充值；认证失败先检查 Key 和权限，网络错误、限流或模型不可用按真实错误处理，不一律要求充值。不编造余额、套餐、价格或预计费用。
 - 充值金额与支付由用户在官网自行完成。用户确认已配置或已充值后，先核对现有任务状态，再继续已授权且尚未完成的生成；保留节点及结果，不重复提交。没有可用的免费验证接口时，不用付费生成偷偷测试 Key。
 
 需要 Key 时可提示：
 
-> 接下来生成图片、视频或配音需要 safillu API Key。请到 [safillu 官网](https://api.safillu.com) 获取 Key，在本地 FilmFraylo 的「设置 → 媒体模型 → safillu → 编辑模型」中填写并保存。如果账户余额不足，可在同一网站充值。请直接在网页填写 Key，无需发给我；完成后告诉我，我们继续当前任务。
+> 接下来调用 Safillu 模型需要 API Key。请打开 [Safillu 官网](https://api.safillu.com/)，注册账号并申请 API Key；已有账号可直接登录申请。然后回到 FilmFraylo，在「设置 → 媒体模型 → Safillu AI → 编辑模型」填写并保存（文本模型请在「设置 → 语言模型 → Safillu AI → 编辑」填写）。Key 只需填在本地设置中，无需发给我；配置完成后继续当前任务。
 
 ## 启动与定位
 

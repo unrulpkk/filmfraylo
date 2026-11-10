@@ -14,7 +14,7 @@ function baseAddress(context: Context) {
 
 function connection(context: Context) {
   const apiKey = context.config.apiKey.trim();
-  if (!apiKey) throw new Error("调用 Safillu 模型需要 API Key，请到 https://api.safillu.com/ 申请，并在设置 → 媒体模型 → Safillu AI 中填写");
+  if (!apiKey) throw new Error("调用 Safillu 模型需要 API Key。请前往 https://api.safillu.com/ 注册账号并申请 API Key，再回到 FilmFraylo「设置 → 媒体模型 → Safillu AI → 编辑模型」填写并保存。已有账号可直接登录申请；Key 只需在本地设置中填写，无需发送到聊天中。");
   return { baseUrl: baseAddress(context), headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } };
 }
 
@@ -284,10 +284,10 @@ export default {
   id: "safillu",
   label: "Safillu AI",
   icon: "",
-  version: "1.5.2",
+  version: "1.5.3",
   modelsUrl: "https://api.safillu.com/v1/models",
   readme:
-    "支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
+    "调用 Safillu 模型前，请前往 [Safillu 官网](https://api.safillu.com/) 注册账号并申请 API Key（已有账号直接登录申请），然后将 Key 填入下方 API Key 输入框并保存。请直接在本地设置中填写，无需发送到聊天中。\n\n支持 Z-Image 与 Qwen 文生图、Qwen 图片编辑、MiniMax H3 视频、Qwen3 音色设计和 YuE2 BGM。Qwen 编辑至少提供一张原图，图片数量与编辑参数由当前站点接口校验；模型名称与能力可从线上同步。H3 最多支持 9 图、3 音频、1 视频；首尾帧仅支持 768P/2K。成品下载使用同一 API Key。停止生成仅停止本地等待，线上任务仍可能完成。",
   rules,
   async getPrice(request: ProviderPriceRequest): Promise<ProviderPrice | null> {
     const model = (await priceCatalog(this)).find(item => item.model_name === request.model);
