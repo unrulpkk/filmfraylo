@@ -14,21 +14,48 @@
       </div>
       <div v-else class="welcomeContent">
         <h1 id="welcomeTitle">快速开始</h1>
-        <p class="description">可直接进入工作区，由 Harness 操作画布、导入或使用自己生成的素材。调用 Safillu 模型时再配置 Key。</p>
-        <el-button class="loginButton" type="primary" :loading="saving" @click="completeSetup">直接进入工作区</el-button>
-        <p><a href="https://api.safillu.com/" target="_blank" rel="noopener noreferrer">需要调用 Safillu 模型？前往官网注册账号并申请 API Key</a>，然后在下方填写。已有账号可直接登录申请。</p>
-        <el-input
-          v-model="newApiKey"
-          type="password"
-          showPassword
-          autocomplete="off"
-          placeholder="输入在 Safillu 官网申请的 API Key"
-          aria-label="Safillu API Key"
-          :disabled="saving"
-          class="keyInput" />
-        <el-button class="loginButton" type="primary" :loading="saving" :disabled="!newApiKey.trim()" @click="configureNewApi">
-          配置 key 并开始使用
-        </el-button>
+        <p class="description">输入 Safillu API Key 即可使用内置模型</p>
+
+        <section class="keyGuideCard" aria-label="Safillu API Key 配置">
+          <div class="keyLabelRow">
+            <label class="keyLabel" for="helloApiKeyInput">API Key</label>
+            <a
+              class="applyKeyLink"
+              :href="safilluKeysUrl"
+              target="_blank"
+              rel="noopener noreferrer">
+              <span>没有 Key？前往 Safillu 申请</span>
+              <IconExternalLink :size="14" aria-hidden="true" />
+            </a>
+          </div>
+          <el-input
+            id="helloApiKeyInput"
+            v-model="newApiKey"
+            size="large"
+            type="password"
+            dir="ltr"
+            showPassword
+            clearable
+            autocomplete="off"
+            placeholder="输入或粘贴 Safillu API Key"
+            aria-label="Safillu API Key"
+            :disabled="saving"
+            class="keyInput"
+            @keyup.enter="configureNewApi" />
+          <el-alert v-if="keyError" class="keyError" :title="keyError" type="error" :closable="false" showIcon />
+          <el-button
+            class="loginButton"
+            type="primary"
+            :loading="saving"
+            :disabled="!normalizedApiKey"
+            @click="configureNewApi">
+            保存 Key 并开始使用
+          </el-button>
+        </section>
+
+        <el-divider class="actionDivider">或</el-divider>
+
+        <el-button class="skipButton" :loading="saving" @click="completeSetup">暂不配置，直接进入工作区</el-button>
       </div>
 
       <footer class="pageFooter">
@@ -48,10 +75,11 @@
 
 <script setup lang="ts">
 import axios from "axios";
-import { defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
-import { IconArrowLeft, IconQrcode, IconDeviceDesktop } from "@tabler/icons-vue";
+import { IconArrowLeft, IconExternalLink, IconQrcode, IconDeviceDesktop } from "@tabler/icons-vue";
+import { t } from "@toonflow/i18n/vue";
 import safillu from "@toonflow/providers/language/safillu";
 import safilluSource from "@toonflow/providers/media/safillu?raw";
 import { invalidateNodeModels } from "@toonflow/nodes-scaffold/nodeAi";
@@ -59,10 +87,13 @@ import { saveSettings } from "@/stores/settings";
 import type { MediaProvider } from "@/components/settings/panels/mediaModel/types";
 import { useHelloStore } from "@/stores/hello";
 import anonymousData from "@/lib/anonymousData";
-import { logoUrl } from "@/lib/product";
+import { logoUrl, product } from "@/lib/product";
 import bg from "./bg.vue";
 import languageSelect from "@/components/languageSelect.vue";
 import { deviceHubEnabled, mobileConnection, mobileConnectionLabel } from "@/lib/mobile";
+
+const safilluBaseUrl = (product.gateway?.baseUrl || "https://api.safillu.com").replace(/\/+$/, "");
+const safilluKeysUrl = `${safilluBaseUrl}/keys`;
 
 const languageModel = defineAsyncComponent(() => import("@/components/settings/panels/languageModel/index.vue"));
 const mobileConnect = defineAsyncComponent(() => import("@/components/mobileConnect.vue"));
@@ -70,19 +101,31 @@ const mobileConnectVisible = ref(false);
 const view = ref<"welcome" | "custom">("welcome");
 const saving = ref(false);
 const newApiKey = ref("");
+const keyError = ref("");
+const normalizedApiKey = computed(() =>
+  newApiKey.value
+    .trim()
+    .replace(/^Bearer\s+/i, "")
+    .trim()
+);
 const router = useRouter();
 const hello = useHelloStore();
 
+watch(newApiKey, () => {
+  keyError.value = "";
+});
+
 async function configureNewApi() {
-  if (saving.value || !newApiKey.value.trim()) return;
+  if (saving.value || !normalizedApiKey.value) return;
   saving.value = true;
+  keyError.value = "";
   try {
-    const apiKey = newApiKey.value.trim();
+    const apiKey = normalizedApiKey.value;
     const response = await axios.get<{ code: number; data: MediaProvider[] }>("/api/providers/media/list");
-    if (response.data.code !== 200) throw new Error("读取媒体供应商失败");
+    if (response.data.code !== 200) throw new Error(t`读取媒体供应商失败`);
     if (!response.data.data.some((provider) => provider.id === safillu.id)) {
       const added = await axios.post("/api/providers/media/add", { source: safilluSource });
-      if (added.data.code !== 200) throw new Error(added.data.message || "添加 NewAPI 失败");
+      if (added.data.code !== 200) throw new Error(added.data.message || t`添加 Safillu 媒体供应商失败`);
     }
     await saveSettings((current) => {
       const providers = (current.customProviders ?? []) as { id: string }[];
@@ -90,16 +133,24 @@ async function configureNewApi() {
       const { id, label, version, apiUrl, protocol, models } = safillu;
       return {
         customProviders: [{ id, label, version, apiUrl, protocol, models, apiKey }, ...providers.filter((provider) => provider.id !== id)],
-        mediaProviderConfigs: { ...configs, [id]: { ...configs[id], apiKey, baseUrl: "https://api.safillu.com" } },
+        mediaProviderConfigs: { ...configs, [id]: { ...configs[id], apiKey, baseUrl: safilluBaseUrl } },
       };
     });
     invalidateNodeModels("language");
     invalidateNodeModels("media");
     newApiKey.value = "";
     await hello.complete();
+    anonymousData.track("onboarding.complete");
+    ElMessage.success(t`Safillu API Key 配置成功`);
     await router.replace("/home");
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "配置 NewAPI 失败");
+    const message = axios.isAxiosError<{ message?: string }>(error)
+      ? error.response?.data?.message || error.message
+      : error instanceof Error
+      ? error.message
+      : t`配置 Safillu API Key 失败，请重试`;
+    keyError.value = message;
+    ElMessage.error(message);
   } finally {
     saving.value = false;
   }
@@ -113,7 +164,7 @@ async function completeSetup() {
     anonymousData.track("onboarding.complete");
     await router.replace("/home");
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : "保存引导状态失败，请重试");
+    ElMessage.error(error instanceof Error ? error.message : t`保存引导状态失败，请重试`);
   } finally {
     saving.value = false;
   }
@@ -173,45 +224,110 @@ async function completeSetup() {
 
     .welcomeContent {
       grid-row: 2;
+      justify-self: center;
       width: 100%;
-      max-width: 420px;
+      max-width: 460px;
       text-align: center;
 
       h1 {
-        margin: 0 0 12px;
-        font-size: clamp(32px, 3.4vw, 40px);
+        margin: 0 0 10px;
+        font-size: clamp(30px, 3.2vw, 38px);
         font-weight: 650;
-        line-height: 1.35;
+        line-height: 1.3;
         letter-spacing: -0.8px;
       }
 
       .description {
-        margin: 0 0 32px;
+        margin: 0 0 24px;
         color: var(--el-text-color-secondary);
         font-size: 14px;
-        line-height: 1.8;
+        line-height: 1.75;
+      }
+
+      .keyGuideCard {
+        display: grid;
+        gap: 14px;
+        padding: 20px;
+        border: 1px solid var(--el-border-color-lighter);
+        border-radius: var(--ui-radius-large);
+        background: var(--el-fill-color-light);
+        text-align: start;
+      }
+
+      .keyLabelRow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 12px;
+      }
+
+      .keyLabel {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--el-text-color-primary);
+      }
+
+      .applyKeyLink {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--el-color-primary);
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: opacity 0.15s ease;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      .keyInput {
+        width: 100%;
+      }
+
+      .keyError {
+        margin: 0;
+      }
+
+      .loginButton {
+        width: 100%;
+        height: auto;
+        min-height: 44px;
+        margin: 0;
+        padding: 10px 16px;
+        white-space: normal;
+        border-radius: var(--ui-radius);
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .actionDivider {
+        margin: 20px 0 16px;
+
+        :deep(.el-divider__text) {
+          background: var(--el-bg-color);
+          color: var(--el-text-color-secondary);
+          font-size: 12px;
+        }
+      }
+
+      .skipButton {
+        width: 100%;
+        height: auto;
+        min-height: 42px;
+        margin: 0;
+        padding: 10px 16px;
+        white-space: normal;
+        border-radius: var(--ui-radius);
+        font-size: 14px;
       }
 
       .buttonIcon {
         width: 18px;
         height: 18px;
         margin-inline-end: 8px;
-      }
-
-      .keyInput {
-        min-height: 50px;
-        margin: 0 0 16px;
-      }
-
-      .loginButton {
-        width: 100%;
-        height: auto;
-        min-height: 50px;
-        padding: 12px;
-        white-space: normal;
-        border-radius: calc(var(--ui-radius) * 1.625);
-        font-size: 16px;
-        font-weight: 600;
       }
 
       .secondaryActions {
@@ -242,6 +358,7 @@ async function completeSetup() {
     .pageFooter {
       grid-row: 3;
       align-self: end;
+      text-align: center;
       color: var(--el-text-color-secondary);
       font-size: 12px;
 
@@ -315,7 +432,7 @@ async function completeSetup() {
     }
 
     .welcomePanel {
-      padding: 32px 20px;
+      padding: 56px 20px 32px;
 
       .welcomeContent {
         justify-self: center;
