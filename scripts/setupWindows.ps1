@@ -1,7 +1,7 @@
 param([string]$repository = '', [string]$codex = 'codex', [switch]$register, [switch]$inspect,
   [ValidateSet('', 'check', 'prepare', 'apply')][string]$update = '', [string]$version = '',
   [string]$installation = '', [string]$dataDirectory = '', [switch]$restart,
-  [ValidateSet('desktop', 'web')][string]$mode = 'desktop',
+  [ValidateSet('desktop', 'web')][string]$mode = 'web',
   [ValidateSet('codex', 'claude', 'cursor', 'opencode', 'gemini', 'workbuddy', 'generic')][string]$harness = 'codex')
 $ErrorActionPreference = 'Stop'
 if ($register -and $harness -notin @('codex', 'workbuddy')) { throw '-register is only for Codex/WorkBuddy. Other harnesses receive configuration to merge; omit -register.' }

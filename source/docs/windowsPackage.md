@@ -1,6 +1,6 @@
 # FilmFraylo Windows 运行包
 
-此包是可选本地网页版，原生桌面版见 desktopPackage.md。需要 Windows 10/11 x64。完整解压到普通目录，双击 **start.cmd**：启动本地服务后自动打开浏览器。运行包自带 Bun，不需要安装 Node.js、Bun、Nginx 或下载源码，不再套 EXE 启动器。
+此包是推荐的本地网页版，原生桌面版见 desktopPackage.md。需要 Windows 10/11 x64。完整解压到普通目录，双击 **start.cmd**：启动本地服务后自动打开浏览器，支持直接选择本机任意项目目录。运行包自带 Bun，不需要安装 Node.js、Bun、Nginx 或下载源码，不再套 EXE 启动器。
 
 首次启动在客户端填写 Safillu API Key，或通过“添加私有提供商”配置 API Key 和语言模型，再进入项目首页。已保存的配置无需重复填写。首页保留内置输入框，可独立创作；Codex 也可通过 MCP 操作画布。媒体服务可在“设置 → 媒体模型”中配置。
 

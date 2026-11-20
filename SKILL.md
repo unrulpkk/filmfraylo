@@ -15,11 +15,11 @@ WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，�
 
 ## 首次使用与系统识别
 
-首次下载安装前，按 [运行方式与来源说明](references/harnesses.md#首次选择运行方式) 向用户提供两个选项：**桌面版（推荐，Windows EXE / macOS App）**、**本地网页版**，说明源码地址、构建提交号、SHA256 校验和未签名提示。已有明确选择时直接沿用，不反复询问；用户要求“推荐方案”时优先桌面版。先核实对应 Release 是否有真正的桌面成品，不能把打开浏览器的 EXE 启动器称为桌面版，也不能在桌面版缺失时悄悄改用网页版。
+首次下载安装前，按 [运行方式与来源说明](references/harnesses.md#首次选择运行方式) 向用户提供两个选项：**本地网页版（推荐，浏览器打开画布）**、**桌面版（Windows EXE / macOS App）**，说明源码地址、构建提交号、SHA256 校验和未签名提示。已有明确选择时直接沿用，不反复询问；用户要求“推荐方案”时优先本地网页版。先核实对应 Release 是否有对应成品，不能把打开浏览器的 EXE 启动器称为桌面版，也不能在所选版本缺失时悄悄改用另一种。
 
 普通用户只安装 Skill，由本 Skill 下载已经编译好的应用成品。无需克隆 `source/`、安装开发依赖或执行源码构建；仓库源码用于查看与审查。没有正式 Release、对应平台附件缺失或下载失败时，报告具体原因，不自动改走源码安装。仅在用户明确要求源码开发或自编译时使用开发流程。
 
-已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据；该入口必须与用户选择的运行方式一致。以下脚本默认使用真正桌面版；用户选择网页版时显式传入 `-mode web` / `--mode web`，不隐式降级。按宿主系统选择，不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
+已有 `references/localRuntime.md` 时使用其中命令，不重复下载或迁移数据；该入口必须与用户选择的运行方式一致。以下脚本默认使用本地网页版（web）；用户选择桌面版时显式传入 `-mode desktop` / `--mode desktop`，不隐式切换。按宿主系统选择，不从浏览器 User-Agent 猜测系统，不下载其他平台的包：
 
 - Windows：运行 `powershell -NoProfile -File <本Skill目录>/scripts/setupWindows.ps1 -harness <宿主>`，脚本确认 x64，下载 Windows ZIP。
 - macOS：运行 `sh <本Skill目录>/scripts/setupMac.sh --harness <宿主>`，脚本自动识别 Intel / Apple Silicon（包括 Rosetta），下载对应 DMG。
@@ -27,7 +27,7 @@ WorkBuddy 用户先读取 [WorkBuddy 首次使用](references/workbuddy.md)，�
 
 宿主参数为 `codex`、`claude`、`cursor`、`opencode`、`gemini`、`workbuddy` 或 `generic`；省略时默认为 Codex。六种宿主默认自动配置 MCP，只有 Codex 使用 Codex CLI；其他宿主合并用户级配置、保留无关内容和注释、拒绝覆盖同名冲突。generic 仅生成配置。`-register` / `--register` 保留兼容旧调用。脚本的 `-inspect` / `--inspect` 只显示系统、架构、下载文件、宿主和安装位置，不下载或启动。路径作为独立命令参数传入，含空格时正确引用。Codex CLI 不在 PATH 时可使用 `-codex` / `--codex` 指定实际 CLI 路径。
 
-本仓库根目录就是 FilmFraylo Skill。应用制品只从 [GitHub Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 获取；不要使用 Source code ZIP/TAR 或 Actions 临时 artifact。脚本读取 `references/releaseRepository.txt`，先解析正式 Release 并固定到该版本：桌面包为 `filmFraylo-desktop-windows-x64.zip`、`filmFraylo-desktop-macos-arm64.dmg` 或 `filmFraylo-desktop-macos-x64.dmg`；网页版把文件名中的 `desktop` 换为 `web`。先校验同名 `.sha256` 再安装；旧 Release 缺少新附件时明确报告，不拿旧 Web EXE 替代桌面版。
+本仓库根目录就是 FilmFraylo Skill。应用制品只从 [GitHub Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 获取；不要使用 Source code ZIP/TAR 或 Actions 临时 artifact。脚本读取 `references/releaseRepository.txt`，先解析正式 Release 并固定到该版本：网页版为 `filmFraylo-web-windows-x64.zip`、`filmFraylo-web-macos-arm64.dmg` 或 `filmFraylo-web-macos-x64.dmg`；桌面包把文件名中的 `web` 换为 `desktop`。先校验同名 `.sha256` 再安装；旧 Release 缺少新附件时明确报告，不拿旧 Web EXE 替代桌面版。
 
 单独安装 Skill 也可使用同一 Release 的 `filmFrayloSkills.zip`，包含官方 MCP Skill 依赖。仓库地址为空时，使用用户提供或已验证的 GitHub 地址，以 `-repository owner/repo` / `--repository owner/repo` 传入；不能猜测下载源。不会覆盖已有应用或已修改的 Skill；安装冲突时保留现有内容，核对 Skill 与运行包版本。
 

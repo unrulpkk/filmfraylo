@@ -4,22 +4,22 @@ FilmFraylo 共用一个 SKILL.md 和官方 stdio MCP，不为不同宿主维护�
 
 ## 首次选择运行方式
 
-首次下载前检测本机系统与架构，并检查 [正式 Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 的附件和说明。向用户展示实际可用性，推荐顺序为桌面版、网页版：
+首次下载前检测本机系统与架构，并检查 [正式 Releases](https://github.com/unrulpkk/filmfraylo/releases/latest) 的附件和说明。向用户展示实际可用性，推荐顺序为本地网页版、桌面版：
 
 | 选择 | 用户体验 | 需要说明 |
 | --- | --- | --- |
-| 桌面版（推荐） | 独立应用窗口，画布和本地服务一起启动；Windows 使用 EXE，macOS 使用 App / DMG | 需有对应系统的真正桌面制品；未签名版本可能遇到系统安全提示 |
-| 本地网页版 | 本地服务运行，浏览器中使用画布 | 同样需要下载本地运行包；关闭网页不会停止服务，按运行包说明停止 |
+| 本地网页版（推荐） | 本地服务运行，浏览器中使用画布，轻量免安装并支持直接选择本机目录 | 同样需要下载本地运行包；关闭网页不会停止服务，按运行包说明停止 |
+| 桌面版 | 独立应用窗口，画布和本地服务一起启动；Windows 使用 EXE，macOS 使用 App / DMG | 需有对应系统的真正桌面制品；未签名版本可能遇到系统安全提示 |
 
 两种方式首次启动均可直接进入项目首页，无需 API Key；调用 Safillu 模型时再申请并配置 Key。内置输入框保留，可独立使用；六种 Harness 也可通过原生 MCP 创建画布、节点和本地文件，使用自身的推理能力完成创作。Harness 可使用自身图片生成能力并导入素材；FilmFraylo 内的媒体模型调用使用对应供应商 Key。项目与素材保存在本地。网页方式仍会执行本地程序，不能宣称它无需信任下载内容或能绕过系统限制。
 
 首次提示示例（仅在两种成品都已发布时使用）：
 
-> 建议使用 FilmFraylo 桌面版：Windows 下载 EXE 成品，画布和服务集成在一个应用里；也可以选择浏览器中使用的本地网页版。技能和应用的[源码公开](https://github.com/unrulpkk/filmfraylo)，下载前会核对 Release，下载后会校验 SHA256。未签名版本可能出现系统安全提示；源码公开和校验通过不代表绝对安全。你希望使用「桌面版（推荐）」还是「本地网页版」？
+> 建议使用 FilmFraylo 本地网页版：轻量免安装，启动本地服务后直接在浏览器中使用画布；也可以选择独立窗口运行的桌面版（Windows EXE / macOS App）。技能和应用的[源码公开](https://github.com/unrulpkk/filmfraylo)，下载前会核对 Release，下载后会校验 SHA256。未签名版本可能出现系统安全提示；源码公开和校验通过不代表绝对安全。你希望使用「本地网页版（推荐）」还是「桌面版」？
 
 macOS 将提示中的 Windows EXE 换为对应架构的 App / DMG。用户已明确选择或要求推荐方案时不重复提问。把已选方式记入现有项目的 productionState.md（已有项目时），后续沿用；尚未选项目时沿用当前对话，不为记录偏好另建项目或配置系统。
 
-安装脚本默认 `desktop`，下载 `filmFraylo-desktop-<平台>.zip/dmg`，启动原有 Electrobun 桌面窗口。选择网页版传 `-mode web` / `--mode web`，下载 `filmFraylo-web-<平台>.zip/dmg`，直接使用随包 Bun 启动服务。Windows Web 包不再包含 EXE 浏览器启动器。新版工作流需发布新标签后才会提供这些附件；若 Release 缺少所选包，明确报告未发布，不用旧版启动器替代。
+安装脚本默认 `web`，下载 `filmFraylo-web-<平台>.zip/dmg`，直接使用随包 Bun 启动服务并在浏览器打开。选择桌面版传 `-mode desktop` / `--mode desktop`，下载 `filmFraylo-desktop-<平台>.zip/dmg`，启动原有 Electrobun 桌面窗口。Windows Web 包不再包含 EXE 浏览器启动器。新版工作流需发布新标签后才会提供这些附件；若 Release 缺少所选包，明确报告未发布，不用旧版启动器替代。
 
 Windows 桌面安装在 `~/.filmfraylo/desktop`，新版便携包双击最外层 `filmFraylo.exe` 启动，保留旁边的 `app` 和 `data` 文件夹；旧包入口仍为 `app/bin/launcher.exe`。macOS 安装到 `~/Applications/FilmFraylo.app`，已有系统 Applications 安装则复用。新版 Windows 便携包使用自身 `data` 目录；旧版和 macOS 默认使用 `~/.filmfraylo/desktopData`，已有安装目录旁 data/settings.json 时保持原目录。启动输出含 `mode: desktop`、实际 MCP 目录和 runtime 路径，不需要浏览器页面。Windows 需要系统 WebView2；缺少时引导安装微软官方运行环境，不换用浏览器冒充桌面。
 
@@ -47,7 +47,7 @@ Get-Content -LiteralPath ".\filmFraylo-desktop-windows-x64.zip.sha256"
 
 ## 安装位置与选择
 
-下方命令默认桌面版；网页版显式追加 `-mode web` / `--mode web`。
+下方命令默认本地网页版；桌面版显式追加 `-mode desktop` / `--mode desktop`。
 
 把完整 `filmfraylo/` Skill 目录放入下表对应目录；不要只复制 SKILL.md，也不要把应用源码当作 Skill 安装。原生依赖 `toonflow/` 与 `filmfraylo/` 同级，由启动脚本调用官方安装器补齐。`agents/openai.yaml` 只是 Codex 展示元数据，其他宿主读取 SKILL.md 即可。
 
